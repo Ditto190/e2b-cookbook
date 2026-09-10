@@ -2,6 +2,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #     "agent-api-sdk",
+#     "httpx>=0.27,<1",
 # ]
 #
 # [tool.uv.sources]
@@ -16,7 +17,26 @@ import argparse
 import asyncio
 import json
 
-from agent_api_sdk import AgentAPISDK
+import httpx
+from agent_api_sdk import AgentAPISDK, AsyncAgentSession
+
+# The Agents API rejects requests without this header (400 invalid_beta) and the
+# preview SDK does not send it yet, so inject it via a custom httpx client.
+BETA_HEADERS = {"OpenAI-Beta": "agents=v1"}
+
+# The API renamed input events to `agent.session.input.*`; the preview SDK still
+# posts `session.input.*` (400 invalid_request_error). Rewrite until upstream catches up.
+_post_events = AsyncAgentSession._post_events
+
+
+async def _post_prefixed_events(self: AsyncAgentSession, events: list, **kwargs):
+    for event in events:
+        if str(event.get("type", "")).startswith("session.input."):
+            event["type"] = f"agent.{event['type']}"
+    return await _post_events(self, events, **kwargs)
+
+
+AsyncAgentSession._post_events = _post_prefixed_events  # type: ignore[method-assign]
 
 
 async def main() -> None:
@@ -30,7 +50,9 @@ async def main() -> None:
     parser.add_argument("--input", default="Run a shell command to print hello from the sandbox.")
     args = parser.parse_args()
 
-    async with AgentAPISDK(timeout=600) as client:
+    async with AgentAPISDK(
+        http_client=httpx.AsyncClient(timeout=600, headers=BETA_HEADERS)
+    ) as client:
         if args.create_agent:
             agent = await client.agents.create(model=args.model, name=args.create_agent)
             print(json.dumps({"agent_id": agent.id}))
