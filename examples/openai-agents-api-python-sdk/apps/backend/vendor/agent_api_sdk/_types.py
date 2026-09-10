@@ -430,16 +430,16 @@ InputLike: TypeAlias = str | InputMessageParam | Sequence[InputMessageParam]
 
 
 class SessionInputMessageParam(TypedDict):
-    type: Required[Literal["session.input.message"]]
+    type: Required[Literal["agent.session.input.message"]]
     input: Required[Sequence[InputMessageParam]]
 
 
 class SessionInputCancelParam(TypedDict):
-    type: Required[Literal["session.input.cancel"]]
+    type: Required[Literal["agent.session.input.cancel"]]
 
 
 class SessionInputToolResultParam(TypedDict):
-    type: Required[Literal["session.input.tool_result"]]
+    type: Required[Literal["agent.session.input.tool_result"]]
     call_id: Required[str]
     success: Required[bool]
     turn_id: Required[str]
@@ -559,7 +559,7 @@ class TurnPayload(TypedDict):
     created_at: Required[int]
     error: Required[_TurnErrorPayload | None]
     id: Required[str]
-    object: Required[Literal["session.turn"]]
+    object: Required[Literal["session.turn", "agent.session.turn"]]
     session_id: Required[str]
     started_at: Required[int | None]
     status: Required[TurnStatusInfo]
@@ -573,7 +573,7 @@ class TurnInfo(AgentAPIModel):
     created_at: int
     error: SessionTurnErrorInfo | None
     id: str
-    object: Literal["session.turn"]
+    object: Literal["session.turn", "agent.session.turn"]
     session_id: str
     started_at: int | None
     status: TurnStatusInfo
@@ -1059,7 +1059,7 @@ class AgentThreadInfo(AgentAPIModel):
 
 class SubagentInfo(AgentAPIModel):
     id: str
-    object: Literal["session.subagent"]
+    object: Literal["session.subagent", "agent.session.subagent"]
     session_id: str
     name: str
     instructions: list[AgentContentInfo] | None
@@ -1516,6 +1516,7 @@ def parse_session_event(
     event_payload = dict(payload)
     if "event_id" not in event_payload and event_id is not None:
         event_payload["event_id"] = event_id
+    _normalize_event_type(event_payload)
     _fill_event_envelope_fields(event_payload)
     enriched_payload = {
         **event_payload,
@@ -1531,6 +1532,21 @@ def parse_session_event(
         if isinstance(event_type, str) and event_type not in known_types:
             return UnknownSessionEvent.model_validate(enriched_payload)
         raise error
+
+
+_AGENT_EVENT_PREFIX = "agent."
+
+
+def _normalize_event_type(event_payload: JsonObject) -> None:
+    """Map `agent.session.*` output events onto the `session.*` names this SDK
+    was written against. The API started prefixing session event types with
+    `agent.`; the raw type stays available on `event.data["type"]`."""
+    event_type = event_payload.get("type")
+    if not isinstance(event_type, str) or not event_type.startswith(_AGENT_EVENT_PREFIX):
+        return
+    stripped = event_type[len(_AGENT_EVENT_PREFIX):]
+    if stripped in get_args(OutputEventType):
+        event_payload["type"] = stripped
 
 
 def _fill_event_envelope_fields(event_payload: JsonObject) -> None:

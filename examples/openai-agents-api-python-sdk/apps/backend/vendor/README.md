@@ -9,3 +9,14 @@ Replace this directory with an installed package as soon as the preview SDK is p
 Local compatibility patch: token usage counters and detail objects are optional so
 sparse usage does not abort a terminal event or turn retrieval. Missing values
 remain absent in workbench output.
+
+Local compatibility patch: the client always sends `OpenAI-Beta: agents=v1`. The
+Agents API rejects requests without it (`400 invalid_beta`), and callers that
+construct `AgentAPISDK` without a custom `http_client` would otherwise miss it.
+
+Local compatibility patch: session input events are posted as
+`agent.session.input.message` / `.cancel` / `.tool_result`; the API rejects the
+unprefixed names with `400 invalid_request_error`. Incoming `agent.session.*`
+stream events are normalized back to the `session.*` names the SDK and backend
+match on, so both spellings parse. Turn and subagent resources likewise accept
+`object: agent.session.turn` / `agent.session.subagent` next to the old names.

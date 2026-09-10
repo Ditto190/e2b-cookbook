@@ -79,14 +79,14 @@ class AsyncAgentSession:
         idempotency_key: str | None = None,
     ) -> None:
         await self._post_events(
-            [{"type": "session.input.message", "input": input_messages(input)}],
+            [{"type": "agent.session.input.message", "input": input_messages(input)}],
             previous_state=previous_state,
             state_upload_url=state_upload_url,
             idempotency_key=idempotency_key,
         )
 
     async def send_cancel(self) -> None:
-        await self._post_events([{"type": "session.input.cancel"}])
+        await self._post_events([{"type": "agent.session.input.cancel"}])
 
     async def send_tool_result(
         self,
@@ -98,7 +98,7 @@ class AsyncAgentSession:
         error: str | None = None,
     ) -> None:
         body: JsonObject = {
-            "type": "session.input.tool_result",
+            "type": "agent.session.input.tool_result",
             "turn_id": turn_id,
             "call_id": call_id,
             "success": success,
