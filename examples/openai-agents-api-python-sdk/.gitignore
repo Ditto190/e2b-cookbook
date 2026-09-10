@@ -1,0 +1,15 @@
+# Secrets
+.env
+.env.local
+
+# Deps / build
+node_modules/
+__pycache__/
+.venv/
+dist/
+.ruff_cache/
+*.tsbuildinfo
+
+# Coordinator runtime transcripts
+apps/backend/chat-history/
+apps/backend/shared-memory.json

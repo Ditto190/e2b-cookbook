@@ -1,0 +1,18 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["src/router.tsx", "src/routes/**/*.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": [
+    "src/api/schema.ts",
+    "src/ui/primitives/icons/**",
+    "src/components/ui/**",
+    "src/components/brand.tsx"
+  ],
+  "ignoreDependencies": [
+    "@fontsource/ibm-plex-mono",
+    "@fontsource/ibm-plex-sans",
+    "tailwindcss",
+    "tw-animate-css",
+    "shadcn"
+  ]
+}

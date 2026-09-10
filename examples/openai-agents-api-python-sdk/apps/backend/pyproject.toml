@@ -1,0 +1,66 @@
+[project]
+name = "agents-api-workbench-backend"
+version = "1.0.0"
+description = "Flask backend for the Agents API workbench: pairs each chat with an OpenAI Agents API session and an E2B sandbox running codex exec-server, streamed to the React frontend over SSE"
+authors = [{ name = "Matthew Brockman" }, { name = "Ondrej Drapalik" }]
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.1,<4",
+    "e2b>=2.2.0,<3",
+    # deps of the vendored agent_api_sdk (vendor/ is not installed as a package)
+    "httpx[socks]>=0.27,<1",
+    "pydantic>=2.12,<3",
+    "typing-extensions>=4.12,<5",
+    "python-dotenv>=1.2.2",
+]
+
+[tool.uv]
+package = false
+
+# ty (editor type checker): resolve the vendored SDK and this project's own venv,
+# not a sibling project's (monorepo root confuses environment discovery otherwise)
+[tool.ty.environment]
+python = "./.venv"
+extra-paths = ["vendor"]
+
+# vendored upstream code — resolve it, don't lint it
+[tool.ty.src]
+exclude = ["vendor"]
+
+# `pnpm cleanup` (repo root) → deptry + vulture, the backend half of the
+# dead-code check (knip covers the TS side, but can't parse Python).
+
+# unused/missing dependency scan — vendor/ imports itself as agent_api_sdk
+# without being an installed package, so it must stay out of scope
+[tool.deptry]
+exclude = ["vendor", ".venv"]
+
+[tool.deptry.per_rule_ignores]
+# agent_api_sdk IS vendor/ (imported via ty's extra-paths, never installed);
+# pydantic + typing-extensions are declared FOR the vendored SDK (see the
+# dependency comment above) so they're invisible to a first-party import scan
+DEP001 = ["agent_api_sdk"]
+DEP002 = ["pydantic", "typing-extensions"]
+
+# dead-code scan; decorator-registered callbacks (Flask routes/hooks) are
+# reachable without imports, so their decorators are declared here instead
+# of whitelisting each handler name
+[tool.vulture]
+paths = ["app.py", "chat_logs.py", "chat_history.py", "env.py", "mcp_servers.py"]
+ignore_decorators = [
+    # pydantic resolves validators by decorator, same as Flask does routes
+    "@field_validator",
+    "@app.route",
+    "@app.get",
+    "@app.post",
+    "@app.delete",
+    "@app.errorhandler",
+    "@app.before_request",
+    "@app.after_request",
+]
+
+[dependency-groups]
+dev = [
+    "deptry>=0.25.1",
+    "vulture>=2.16",
+]

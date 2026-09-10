@@ -1,0 +1,1702 @@
+openapi: 3.1.0
+info:
+  title: Agents API Workbench backend
+  description: >
+    Flask backend (apps/backend/app.py) that runs an OpenAI Agents API session
+    against an E2B sandbox. This document is the only contract between the
+    backend and apps/web — the frontend compiles exclusively against types
+    generated from this file (`pnpm gen`). If you change a response shape in
+    app.py, change it here in the same commit.
+  version: 0.1.0
+
+servers:
+  - url: /
+    description: Same-origin; the Vite dev server proxies /api to the Flask port.
+
+paths:
+  /api/memories:
+    get:
+      operationId: getMemories
+      summary: Memories shared with everyone on this workbench, newest first
+      responses:
+        "200":
+          description: Shared memory entries.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [entries]
+                properties:
+                  entries:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MemoryEntry"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/memories/{entry_id}:
+    delete:
+      operationId: deleteMemory
+      summary: Delete a shared memory without allowing save replays to recreate it
+      parameters:
+        - in: path
+          name: entry_id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          $ref: "#/components/responses/Ok"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /api/chats:
+    get:
+      operationId: getChatArchive
+      summary: Shared coordinator chat archive, newest first
+      responses:
+        "200":
+          description: Transcripts and sidebar metadata for this workbench.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chats]
+                properties:
+                  chats:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ArchivedChat"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/chats/import:
+    post:
+      operationId: importChatArchive
+      summary: Import browser archives without replacing coordinator chats
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chats]
+              properties:
+                chats:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ArchivedChat"
+      responses:
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+
+  /api/fork:
+    post:
+      operationId: postFork
+      summary: Clone the sandbox and coordinator transcript into a new chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ClientRequest"
+                - type: object
+                  properties:
+                    promote:
+                      type: boolean
+                    sibling:
+                      type: boolean
+      responses:
+        "200":
+          description: Connected child sandbox and copied transcript.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [chat, archive]
+                properties:
+                  chat:
+                    $ref: "#/components/schemas/SessionSnapshot"
+                  archive:
+                    $ref: "#/components/schemas/ArchivedChat"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/auth/status:
+    get:
+      operationId: getAuthStatus
+      summary: Whether this backend is token-protected, and whether you are in
+      description: >
+        Open to unauthenticated callers. `auth_required` is false for local
+        development (no control token configured); in the E2B template
+        start.sh always writes one, so it is true there.
+      responses:
+        "200":
+          description: Auth state for this browser.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /api/auth/login:
+    post:
+      operationId: postAuthLogin
+      summary: Exchange a control or launch token for a session cookie
+      description: >
+        Accepts the sandbox's persistent control token, or a single-use launch
+        token (the `#token=` fragment of the URL printed in the sandbox
+        terminal). On success sets a 12-hour HttpOnly SameSite=Strict cookie.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  maxLength: 4096
+      responses:
+        "200":
+          description: Session established; cookie set.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authenticated]
+                properties:
+                  authenticated:
+                    type: boolean
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /api/auth/logout:
+    post:
+      operationId: postAuthLogout
+      summary: Clear this browser's session cookie
+      responses:
+        "200":
+          description: Cookie cleared.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authenticated]
+                properties:
+                  authenticated:
+                    type: boolean
+
+  /api/auth/invite:
+    post:
+      operationId: postAuthInvite
+      summary: Mint a single-use share link for another person
+      description: >
+        Returns a URL carrying a launch token that expires in 10 minutes and
+        can be redeemed once. Everyone who redeems one shares this backend's
+        keys, sandboxes and chats — shared access, not multi-tenancy.
+      responses:
+        "200":
+          description: One-time login URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, expires_in]
+                properties:
+                  url:
+                    type: string
+                  expires_in:
+                    type: integer
+                    description: Seconds until the token expires.
+        "401":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+
+  /api/health:
+    get:
+      operationId: getHealth
+      summary: Liveness probe + credential presence
+      description: >
+        Reports whether the backend currently holds each credential (never the
+        values). The frontend key gate opens when either flag is false — the
+        in-sandbox template ships with no keys baked in.
+      responses:
+        "200":
+          description: Server is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/keys:
+    post:
+      operationId: postKeys
+      summary: Supply credentials at runtime (key gate)
+      description: >
+        Accepts either or both keys after boot. They are held in process
+        memory/env only — never persisted or logged. Blank/omitted fields
+        leave the current value untouched.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                e2b_api_key:
+                  type: string
+                openai_api_key:
+                  type: string
+                  description: Dispatcher key — backend process only.
+                openai_executor_api_key:
+                  type: string
+                  description: >
+                    Executor key, handed to the sandbox as CODEX_API_KEY.
+                    Optional; unset means the executor reuses the dispatcher
+                    key.
+      responses:
+        "200":
+          description: Updated credential presence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/models:
+    get:
+      operationId: getModels
+      summary: Selectable Agents API models
+      description: >
+        Live proxy of OpenAI's GET /v1/models, filtered to the gpt-5.5 /
+        gpt-5.6 agent ids (bare or -sol/-luna; codex ids fail self-hosted
+        turns) plus known-good ids the listing omits, cached in-process for an
+        hour. Empty list when no OpenAI key is configured yet; the frontend
+        decorates ids with display names and capability icons.
+      responses:
+        "200":
+          description: Newest-first model ids.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [models]
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ModelInfo"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/mcp/credentials:
+    get:
+      operationId: getMcpCredentials
+      summary: Configured field markers for credentials saved in app memory
+      responses:
+        "200":
+          description: Masked options, never credential values.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpCredentialStatus"
+    post:
+      operationId: saveMcpCredentials
+      summary: Save reusable MCP credentials in workbench memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [server, options]
+              properties:
+                server:
+                  type: string
+                chat_id:
+                  type: string
+                  description: Keep unchanged credentials already configured for this chat.
+                options:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        "200":
+          description: Configured fields, with values masked.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/McpCredentialStatus"
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/mcp/selection:
+    post:
+      operationId: setMcpSelection
+      summary: Save MCPs and reconnect now or after the active turn, preserving workspace and transcript
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chat_id, client_id, mcp]
+              properties:
+                chat_id:
+                  type: string
+                client_id:
+                  type: string
+                mcp:
+                  $ref: "#/components/schemas/McpCapability"
+      responses:
+        "200":
+          description: Updated chat snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionSnapshot"
+        "202":
+          description: MCP selection saved for automatic application after the current turn.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionSnapshot"
+        "400":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/mcp/servers:
+    get:
+      operationId: getMcpServers
+      summary: Selectable MCP servers
+      description: >
+        The picker's catalog: every MCP server this build can attach (a few
+        hand-listed ones plus all of E2B's hosted catalog), the config fields
+        each accepts, and the selection a brand-new chat starts from. Static
+        metadata, no upstream call and no keys. A `service` server is dialled
+        over HTTP by the Agents API itself; an `environment` server is spawned
+        as a stdio subprocess inside the sandbox; a `gateway` server runs
+        behind mcp-gateway in the sandbox with the chat's option values.
+      responses:
+        "200":
+          description: Catalog in registry order, plus the default selection.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [servers, default]
+                properties:
+                  servers:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/McpServerInfo"
+                  default:
+                    type: array
+                    items:
+                      type: string
+                    description: Labels a chat attaches when it picks nothing.
+
+  /api/status:
+    get:
+      operationId: getStatus
+      summary: Snapshot of one chat's backend session
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+        - name: chat_id
+          in: query
+          required: false
+          description: Chat to inspect; omitted or unknown yields an all-null snapshot.
+          schema:
+            type: string
+            pattern: "^[A-Za-z0-9_-]{4,80}$"
+      responses:
+        "200":
+          description: Current session snapshot (all-null fields when no session exists).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionSnapshot"
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /api/chat:
+    post:
+      operationId: postChat
+      summary: Run one agent turn, streamed as Server-Sent Events
+      description: >
+        Creates the Agents API session + E2B sandbox on first use, then streams
+        the turn. Each SSE `data:` line is one JSON-encoded ChatEvent; comment
+        lines (`: keepalive`) are heartbeats. The stream closes after a
+        terminal event (done / cancelled / error), optionally followed by a usage event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: SSE stream of ChatEvent JSON payloads.
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/ChatEvent"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+
+  /api/logs:
+    get:
+      operationId: getLogs
+      summary: Replay and follow one chat's process logs
+      description: >
+        Long-lived SSE stream independent of /api/chat. Replays bounded
+        in-memory history after cursor, then follows backend errors, executor
+        stdout/stderr, and Agents command output. Comment frames are heartbeats.
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+        - $ref: "#/components/parameters/ChatIdQuery"
+        - $ref: "#/components/parameters/LogCursorQuery"
+      responses:
+        "200":
+          description: SSE stream of LogStreamEvent JSON payloads.
+          content:
+            text/event-stream:
+              schema:
+                $ref: "#/components/schemas/LogStreamEvent"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+
+  /api/resume:
+    post:
+      operationId: postResume
+      summary: Reattach a chat's backend context (pauses the other chats)
+      description: >
+        Pauses every other live chat's sandbox, then resumes this chat: the
+        upstream Agents API session is verified (retrieve) and the E2B sandbox
+        is resumed — or recreated — with the executor re-registered. Returns
+        expired=true when the upstream session is gone; the chat is then only
+        a read-only thread whose retained workspace can be recovered by forking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientRequest"
+      responses:
+        "200":
+          description: Resume outcome.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/pause:
+    post:
+      operationId: postPause
+      summary: Snapshot one chat's sandbox now (auto-pause-after-turn toggle)
+      description: >
+        Pauses the chat's sandbox immediately (billing stops; the next message
+        or resume reattaches it). No-op when the chat has no live sandbox;
+        refuses while a turn is running.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientRequest"
+      responses:
+        "200":
+          description: Pause outcome with the resulting snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, session]
+                properties:
+                  ok:
+                    type: boolean
+                  session:
+                    $ref: "#/components/schemas/SessionSnapshot"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/steer:
+    post:
+      operationId: postSteer
+      summary: Submit a text interjection to the active root turn
+      description: >-
+        Deduplicated by chat and submission ID. The upstream lifecycle-finalization
+        and parent-guarded runtime-write conflicts are retried for up to 15 seconds.
+        The same input and upstream Idempotency-Key are reused for runtime-write
+        conflicts; lifecycle-finalization conflicts explicitly require a fresh key.
+        Accepted or ambiguous deliveries are never resent. Other rejections are
+        not retried. Stop cancels pending retries.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SteerRequest"
+      responses:
+        "200":
+          description: Existing or newly admitted interjection. Status does not imply application.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Interjection"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          description: >-
+            no_active_turn; nothing was admitted. The client retries admission
+            with the same submission ID while the run is active (up to 120 seconds),
+            or sends as a normal prompt once the run is idle. Stop cancels the wait.
+            Includes a redacted preview_text when the chat exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/cancel:
+    post:
+      operationId: postCancel
+      summary: Cancel the active turn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/reset:
+    post:
+      operationId: postReset
+      summary: Tear down the session (kills the sandbox, discards the key)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientRequest"
+      responses:
+        "200":
+          $ref: "#/components/responses/Ok"
+        "400":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/files:
+    get:
+      operationId: getFiles
+      summary: List the sandbox workspace tree
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+        - $ref: "#/components/parameters/ChatIdQuery"
+      responses:
+        "200":
+          description: Workspace entries (files and directories, capped at 300).
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [files, workspace]
+                properties:
+                  files:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/WorkspaceEntry"
+                  workspace:
+                    type: string
+        "403":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+  /api/file:
+    get:
+      operationId: getFile
+      summary: Read one workspace file (UTF-8 text ≤256 KB, or an image ≤4 MB)
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+        - $ref: "#/components/parameters/ChatIdQuery"
+        - name: path
+          in: query
+          required: true
+          description: Workspace-relative path (no leading slash).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: >-
+            File content. Text is UTF-8 with the session API key redacted;
+            images (png/jpeg/gif/webp) and videos (mp4/m4v/webm/mov) come
+            back base64-encoded with their mime type.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [path, content, encoding]
+                properties:
+                  path:
+                    type: string
+                  content:
+                    type: string
+                  encoding:
+                    type: string
+                    enum: [utf-8, base64]
+                  mime:
+                    type: string
+                    description: Present only for base64 image/video payloads.
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "415":
+          $ref: "#/components/responses/Error"
+
+  /api/upload:
+    post:
+      operationId: postUpload
+      summary: Upload files into the sandbox workspace (drop zone)
+      description: >
+        Writes each multipart file into /workspace via sandbox.files.write.
+        Any file type is accepted; the whole request body is capped at 100 MB.
+        Refuses while the chat's sandbox is paused.
+      parameters:
+        - $ref: "#/components/parameters/ClientIdHeader"
+        - $ref: "#/components/parameters/ChatIdQuery"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [files]
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "200":
+          description: Workspace-relative paths that were written.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [written]
+                properties:
+                  written:
+                    type: array
+                    items:
+                      type: string
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "413":
+          $ref: "#/components/responses/Error"
+        "502":
+          $ref: "#/components/responses/Error"
+
+components:
+  parameters:
+    ClientIdHeader:
+      name: X-Demo-Client-ID
+      in: header
+      required: true
+      description: Browser-generated client id, 8-80 chars of [A-Za-z0-9_-].
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_-]{8,80}$"
+    ChatIdQuery:
+      name: chat_id
+      in: query
+      required: true
+      description: Chat whose sandbox to read.
+      schema:
+        type: string
+        pattern: "^[A-Za-z0-9_-]{4,80}$"
+    LogCursorQuery:
+      name: cursor
+      in: query
+      required: false
+      description: Last received log sequence. Omit to replay retained history.
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+
+  responses:
+    Ok:
+      description: Acknowledged.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ok]
+            properties:
+              ok:
+                type: boolean
+    Error:
+      description: Error envelope.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    ArchivedChat:
+      type: object
+      required: [id, title, createdAt, updatedAt, turns]
+      properties:
+        capabilities:
+          $ref: "#/components/schemas/Capabilities"
+        id:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{4,80}$"
+        title:
+          type: string
+        createdAt:
+          type: number
+        updatedAt:
+          type: number
+        turns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchivedTurn"
+        expired:
+          type: boolean
+        forkable:
+          type: boolean
+        sandboxId:
+          type: [string, "null"]
+        sessionId:
+          type: [string, "null"]
+        parentChatId:
+          type: [string, "null"]
+
+    SteerRequest:
+      type: object
+      required: [chat_id, client_id, text, submission_id]
+      properties:
+        chat_id:
+          type: string
+        client_id:
+          type: string
+          description: Display-only poster identifier, not authenticated identity.
+        text:
+          type: string
+          minLength: 1
+        submission_id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{1,80}$'
+          description: Client-generated ID stable across retries, scoped to this chat.
+
+    Interjection:
+      type: object
+      required: [submission_id, text, status, at, by]
+      properties:
+        text_offset:
+          type: [integer, "null"]
+          minimum: 0
+          description: Unicode code point offset in the redacted assistant text when this submission was admitted. Preserved through status updates, reload, and fork. Absent or null for older records.
+        submission_id:
+          type: string
+        text:
+          type: string
+        status:
+          type: string
+          enum: [sending, posted, confirmed, became_turn, unconfirmed, refused, cancelled]
+        at:
+          type: number
+          description: Submission time in Unix milliseconds.
+        by:
+          type: string
+          description: Display-only client ID of the poster.
+        detail:
+          type: [string, "null"]
+
+    ArchivedTurn:
+      type: object
+      required: [id, prompt, phase, activities, text, outcome]
+      properties:
+        id:
+          type: integer
+        upstreamTurnId:
+          type: string
+        usage:
+          $ref: "#/components/schemas/TokenUsage"
+        prompt:
+          type: string
+        phase:
+          type: [string, "null"]
+        activities:
+          type: array
+          items:
+            $ref: "#/components/schemas/ArchivedActivity"
+        text:
+          type: string
+        reasoning:
+          type: [string, "null"]
+          description: Redacted reasoning summaries, separated by blank lines. Null or absent means none observed.
+        outcome:
+          type: string
+          enum: [running, done, cancelled, error]
+        error:
+          type: [string, "null"]
+        errorCode:
+          type: [string, "null"]
+        forkable:
+          type: [boolean, "null"]
+        terminal:
+          type: [boolean, "null"]
+        interjections:
+          type: array
+          items:
+            $ref: "#/components/schemas/Interjection"
+        from_submission_id:
+          type: [string, "null"]
+          description: Interjection that started this adopted turn.
+
+    ArchivedActivity:
+      type: object
+      required: [tone, label]
+      properties:
+        agent_id:
+          type: [string, "null"]
+          description: >
+            Subagent identity from a delegation item or cached command turn lookup.
+            "unknown" means the turn belongs to this run but its owner could not
+            be resolved. Null or absent for unattributed root activity.
+        id:
+          type: [string, "null"]
+        tone:
+          type: string
+        label:
+          type: string
+        detail:
+          type: [string, "null"]
+        durationMs:
+          type: [number, "null"]
+        linkChatId:
+          type: [string, "null"]
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        preview_text:
+          type: string
+          description: Redacted steering text for a local pending chip when admission returns no_active_turn. Omitted if the chat does not exist.
+        error:
+          type: string
+        code:
+          type: string
+          description: >
+            Machine-readable failure class. "missing_keys" — chat attempted
+            without credentials; the FE renders the inline key setup card.
+            "unauthorized" — no valid session cookie; the FE shows the token
+            gate.
+
+    AuthStatus:
+      type: object
+      required: [auth_required, authenticated]
+      properties:
+        auth_required:
+          type: boolean
+        authenticated:
+          type: boolean
+
+    HealthResponse:
+      type: object
+      required:
+        [
+          ok,
+          has_e2b_key,
+          has_openai_key,
+          has_executor_key,
+          auth_required,
+          authenticated,
+        ]
+      properties:
+        ok:
+          type: boolean
+        has_e2b_key:
+          type: boolean
+        has_openai_key:
+          type: boolean
+        has_executor_key:
+          type: boolean
+          description: >
+            A dedicated executor key is configured. False means the sandbox
+            receives the dispatcher key as CODEX_API_KEY.
+        auth_required:
+          type: boolean
+        authenticated:
+          type: boolean
+
+    ClientRequest:
+      type: object
+      required: [client_id, chat_id]
+      properties:
+        client_id:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{8,80}$"
+        chat_id:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{4,80}$"
+          description: Sidebar chat identity — backend sessions are keyed by it.
+
+    ChatRequest:
+      type: object
+      required: [client_id, chat_id, prompt]
+      properties:
+        capabilities:
+          $ref: "#/components/schemas/Capabilities"
+        client_id:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{8,80}$"
+        chat_id:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{4,80}$"
+          description: Chat this turn belongs to; first turn creates its session.
+        prompt:
+          type: string
+          maxLength: 20000
+        api_key:
+          type: string
+          description: >
+            Optional OpenAI key for this session. Empty/omitted falls back to
+            the host's OPENAI_API_KEY. Changing keys requires a reset first.
+        model:
+          type: string
+          pattern: "^[A-Za-z0-9._-]{1,64}$"
+          description: >
+            Agent model for this chat. Binds when the first turn creates the
+            upstream session; ignored afterwards (see SessionSnapshot.agent_locked).
+        reasoning_effort:
+          $ref: "#/components/schemas/ReasoningEffort"
+        text_verbosity:
+          $ref: "#/components/schemas/Verbosity"
+        service_tier:
+          $ref: "#/components/schemas/ServiceTier"
+
+    McpCredentialStatus:
+      type: object
+      required: [options]
+      properties:
+        options:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
+
+    McpCapability:
+      type: object
+      description: >
+        MCP servers this chat attaches. Changes reconnect the existing workspace
+        to a replacement agent session with recent transcript context. Absent means the default selection; an empty `servers`
+        list means none at all.
+      properties:
+        servers:
+          type: array
+          items:
+            type: string
+          description: Server labels from GET /api/mcp/servers, in registry order.
+        tool_search:
+          type: boolean
+          default: true
+          description: >
+            Discover MCP tools on demand instead of carrying every schema in
+            the session's tool list.
+        options:
+          type: object
+          description: >
+            Config for picked gateway servers, `{label: {optionKey: value}}`
+            (API keys mostly; the keys come from McpServerInfo.options). Sent
+            through POST /api/mcp/credentials and resolved in backend memory;
+            legacy clients may also provide inline values. Every response and
+            persisted record masks values to `•`.
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: string
+
+    McpOption:
+      type: object
+      required: [key, required, description, secret]
+      properties:
+        key:
+          type: string
+          description: Field name in the server's config object, e.g. `apiKey`.
+        required:
+          type: boolean
+          description: The gateway cannot start the server without it.
+        description:
+          type: string
+        secret:
+          type: boolean
+          description: Looks like a credential; render as a password field.
+
+    McpServerInfo:
+      type: object
+      required: [label, name, description, connection_origin, runs_in_sandbox, options, needs_config, prepulled]
+      properties:
+        label:
+          type: string
+          description: Stable id sent back in capabilities.mcp.servers.
+        name:
+          type: string
+          description: Display name for the picker row.
+        description:
+          type: string
+        connection_origin:
+          type: string
+          enum: [service, environment, gateway]
+          description: >
+            service - the Agents API dials the server over HTTP.
+            environment - the sandbox spawns it as a stdio subprocess.
+            gateway - E2B's hosted catalog (every server the installed SDK
+            knows), served by mcp-gateway on sandbox loopback with the chat's
+            option values as config; every picked gateway server shares one
+            authenticated `e2b_gateway` tool entry.
+        runs_in_sandbox:
+          type: boolean
+          description: True for environment- and gateway-origin servers.
+        server_url:
+          type: [string, "null"]
+          description: HTTP endpoint for service-origin servers, else null.
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/McpOption"
+          description: Config fields the server accepts; empty for service/environment servers.
+        needs_config:
+          type: boolean
+          description: >
+            At least one required option. False marks the "free" servers that
+            work with no values at all.
+        prepulled:
+          type: boolean
+          description: >
+            Image cached in the executor template, so it starts instantly;
+            other gateway servers pull on first use.
+        launch:
+          type: [string, "null"]
+          description: Command line that starts the server in the sandbox, else null.
+
+    Delegation:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          default: false
+        max_agents:
+          type: integer
+          minimum: 1
+          maximum: 8
+          default: 3
+
+    MemoryEntry:
+      type: object
+      required: [id, text, tags, source_chat_id, created_at]
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        source_chat_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Capabilities:
+      type: object
+      description: Creation-time settings, copied on fork. Absent means all disabled. Changes are ignored once agent_locked is true.
+      properties:
+        delegation:
+          $ref: "#/components/schemas/Delegation"
+        mcp:
+          $ref: "#/components/schemas/McpCapability"
+
+        memory:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: false
+        reasoning_summary:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              default: false
+
+    # The three agent-tuning enums mirror the OpenAI SDK literals 1:1
+    # (agent_api_sdk._types ReasoningEffort / Verbosity / ServiceTier).
+    ReasoningEffort:
+      type: string
+      enum: [none, minimal, low, medium, high, xhigh, max]
+    Verbosity:
+      type: string
+      enum: [low, medium, high]
+    ServiceTier:
+      type: string
+      description: >
+        OpenAI processing tier: auto (default routing), default (standard),
+        flex (cheaper, slower, queued), priority (faster, premium).
+      enum: [auto, default, flex, priority]
+
+    ModelInfo:
+      type: object
+      required: [id, created]
+      properties:
+        id:
+          type: string
+          description: OpenAI model id (e.g. gpt-5.6-sol).
+        created:
+          type: integer
+          description: Unix seconds, straight from GET /v1/models.
+
+    ResumeResponse:
+      type: object
+      required: [ok, resumed, expired, session]
+      properties:
+        ok:
+          type: boolean
+        resumed:
+          type: boolean
+          description: The chat's backend context is live again.
+        expired:
+          type: boolean
+          description: >-
+            The upstream session is gone. Prompts are disabled, but a retained
+            workspace may still be recovered through a fork.
+        session:
+          $ref: "#/components/schemas/SessionSnapshot"
+
+    Subagents:
+      type: object
+      description: Open means not closed. Counts remain unknown after any stream re-attach for the rest of the run.
+      required: [open, known]
+      properties:
+        open:
+          type: [integer, "null"]
+          minimum: 0
+        known:
+          type: boolean
+
+    SessionSnapshot:
+      type: object
+      description: Mirrors session_snapshot() in app.py.
+      required:
+        - chat_id
+        - connected
+        - paused
+        - session_id
+        - environment_id
+        - executor_pid
+        - active
+        - cancel_ready
+        - sandbox
+        - workspace
+        - model
+        - reasoning_effort
+        - verbosity
+        - service_tier
+        - agent_locked
+        - env_key_available
+        - timeout_at
+        - terminal_reason
+      properties:
+        pending_mcp:
+          oneOf:
+            - $ref: "#/components/schemas/McpCapability"
+            - type: "null"
+          description: Saved selection waiting for the current turn or reconnect to finish.
+        mcp_update_error:
+          type: [string, "null"]
+          description: Last MCP update failure; the previous selection remains active.
+        subagents:
+          $ref: "#/components/schemas/Subagents"
+        capabilities:
+          $ref: "#/components/schemas/Capabilities"
+        trace_url:
+          type: [string, "null"]
+          description: Session trace link only when a verified URL template is configured.
+        chat_id:
+          type: [string, "null"]
+        connected:
+          type: boolean
+          description: Agents API session exists and the sandbox executor is alive.
+        paused:
+          type: boolean
+          description: The chat's sandbox is snapshotted; a resume reattaches it.
+        session_id:
+          type: [string, "null"]
+        environment_id:
+          type: [string, "null"]
+        executor_pid:
+          type: [integer, "null"]
+        active:
+          type: boolean
+          description: A turn is currently running.
+        cancel_ready:
+          type: boolean
+        sandbox:
+          type: [string, "null"]
+          description: E2B sandbox id.
+        workspace:
+          type: string
+        model:
+          type: string
+        reasoning_effort:
+          oneOf:
+            - $ref: "#/components/schemas/ReasoningEffort"
+            - type: "null"
+        verbosity:
+          oneOf:
+            - $ref: "#/components/schemas/Verbosity"
+            - type: "null"
+        service_tier:
+          oneOf:
+            - $ref: "#/components/schemas/ServiceTier"
+            - type: "null"
+        agent_locked:
+          type: boolean
+          description: >
+            The upstream session exists, so the agent config (model, reasoning,
+            verbosity, tier) is fixed — the pickers should be read-only.
+        env_key_available:
+          type: boolean
+          description: The host has a fallback OPENAI_API_KEY configured.
+        timeout_at:
+          type: [string, "null"]
+          format: date-time
+          description: >-
+            When the live sandbox will hit its timeout and auto-pause —
+            SandboxInfo.end_at straight from the E2B SDK. Null unless connected.
+        terminal_reason:
+          type: [string, "null"]
+          enum: [expired, decayed, null]
+          description: >-
+            Why this thread can no longer accept turns. Its sandbox remains
+            available for a recovery fork.
+
+    WorkspaceEntry:
+      type: object
+      required: [path, kind, size, modified]
+      properties:
+        path:
+          type: string
+          description: Workspace-relative path.
+        kind:
+          type: string
+          enum: [file, directory]
+        size:
+          type: [integer, "null"]
+          description: Bytes for files, null for directories.
+        modified:
+          type: integer
+          description: Modification time in nanoseconds since the epoch.
+
+    # --- SSE events (one JSON object per `data:` line) -----------------------
+
+    LogStreamEvent:
+      oneOf:
+        - $ref: "#/components/schemas/LogRecordEvent"
+        - $ref: "#/components/schemas/LogGapEvent"
+        - $ref: "#/components/schemas/LogClosedEvent"
+      discriminator:
+        propertyName: type
+        mapping:
+          log: "#/components/schemas/LogRecordEvent"
+          gap: "#/components/schemas/LogGapEvent"
+          closed: "#/components/schemas/LogClosedEvent"
+
+    LogRecordEvent:
+      type: object
+      required: [type, stream_id, cursor, seq, at, source, stream, text]
+      properties:
+        type:
+          type: string
+          const: log
+        stream_id:
+          type: string
+          description: Changes when backend log history is replaced.
+        cursor:
+          type: integer
+        seq:
+          type: integer
+        at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [backend, executor, agents_command]
+        stream:
+          type: string
+          enum: [stdout, stderr, combined]
+        text:
+          type: string
+        turn_id:
+          type: [string, "null"]
+        item_id:
+          type: [string, "null"]
+        output_index:
+          type: [integer, "null"]
+
+    LogGapEvent:
+      type: object
+      required: [type, dropped_through_seq, available_from]
+      properties:
+        type:
+          type: string
+          const: gap
+        dropped_through_seq:
+          type: integer
+        available_from:
+          type: integer
+
+    LogClosedEvent:
+      type: object
+      required: [type, reason]
+      properties:
+        type:
+          type: string
+          const: closed
+        reason:
+          type: string
+          enum: [reset, shutdown]
+
+    ChatEvent:
+      oneOf:
+        - $ref: "#/components/schemas/InterjectionEvent"
+        - $ref: "#/components/schemas/TurnStartedEvent"
+        - $ref: "#/components/schemas/StateEvent"
+        - $ref: "#/components/schemas/ActivityEvent"
+        - $ref: "#/components/schemas/DeltaEvent"
+        - $ref: "#/components/schemas/TextEvent"
+        - $ref: "#/components/schemas/ReasoningEvent"
+        - $ref: "#/components/schemas/DoneEvent"
+        - $ref: "#/components/schemas/CancelledEvent"
+        - $ref: "#/components/schemas/ErrorEvent"
+        - $ref: "#/components/schemas/UsageEvent"
+      discriminator:
+        propertyName: type
+        mapping:
+          interjection: "#/components/schemas/InterjectionEvent"
+          turn_started: "#/components/schemas/TurnStartedEvent"
+          state: "#/components/schemas/StateEvent"
+          activity: "#/components/schemas/ActivityEvent"
+          delta: "#/components/schemas/DeltaEvent"
+          text: "#/components/schemas/TextEvent"
+          reasoning: "#/components/schemas/ReasoningEvent"
+          done: "#/components/schemas/DoneEvent"
+          cancelled: "#/components/schemas/CancelledEvent"
+          error: "#/components/schemas/ErrorEvent"
+          usage: "#/components/schemas/UsageEvent"
+
+    InterjectionEvent:
+      allOf:
+        - $ref: "#/components/schemas/Interjection"
+        - type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              const: interjection
+
+    TurnStartedEvent:
+      type: object
+      description: Ends the previous archived turn and starts an adopted root within the same run. The run remains active until the stream ends.
+      required: [type, prompt, from_submission_id, previous_outcome]
+      properties:
+        previous_turn_id:
+          type: [string, "null"]
+        previous_usage:
+          oneOf:
+            - $ref: "#/components/schemas/TokenUsage"
+            - type: "null"
+        type:
+          type: string
+          const: turn_started
+        prompt:
+          type: string
+        from_submission_id:
+          type: string
+        previous_outcome:
+          type: string
+          enum: [done, error]
+        previous_error:
+          type: [string, "null"]
+
+    StateEvent:
+      type: object
+      description: Turn lifecycle phase transition.
+      required: [type, phase, message]
+      properties:
+        type:
+          type: string
+          const: state
+        phase:
+          type: string
+          enum: [starting, creating, connecting, resuming, running]
+        message:
+          type: string
+
+    ActivityEvent:
+      type: object
+      description: >
+        One agent activity timeline entry (command, file change, tool call…).
+        Events sharing an `id` describe the same item over time (started →
+        finished) — the UI updates that row in place instead of appending.
+      required: [type, tone, label]
+      properties:
+        agent_id:
+          type: [string, "null"]
+          description: >
+            Subagent identity from a delegation item or cached command turn lookup.
+            "unknown" means the turn belongs to this run but its owner could not
+            be resolved. Null or absent for unattributed root activity.
+        type:
+          type: string
+          const: activity
+        id:
+          type: [string, "null"]
+          description: Upstream item id; null for lifecycle rows (turn/session).
+        tone:
+          type: string
+          enum:
+            - connected
+            - error
+            - turn
+            - running
+            - done
+            - cancelled
+            - approval
+            - idle
+            - item
+        label:
+          type: string
+        detail:
+          type: [string, "null"]
+        duration_ms:
+          type: [integer, "null"]
+
+    DeltaEvent:
+      type: object
+      description: Incremental agent output text.
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: delta
+        text:
+          type: string
+
+    TextEvent:
+      type: object
+      description: >
+        Full output text. Sent when no deltas were streamed, or after a stalled
+        / closed stream to replace a cut-short answer with the retained message.
+        The UI replaces the turn's text instead of appending.
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          const: text
+        text:
+          type: string
+
+    ReasoningEvent:
+      type: object
+      description: Redacted reasoning summary text. Append delta or replace the entire turn's reasoning with text to repair missed or interleaved deltas.
+      required: [type]
+      oneOf:
+        - type: object
+          required: [delta]
+          properties:
+            delta:
+              type: string
+        - type: object
+          required: [text]
+          properties:
+            text:
+              type: string
+      properties:
+        type:
+          type: string
+          const: reasoning
+
+    DoneEvent:
+      type: object
+      description: Terminal — turn finished; snapshot reflects the reusable session.
+      required: [type, status, session]
+      properties:
+        run_complete:
+          type: boolean
+          description: All root turns and steering reconciliation have finished; deferred usage may follow.
+        turn_id:
+          type: string
+          description: Upstream root turn identity.
+        usage:
+          $ref: "#/components/schemas/TokenUsage"
+        type:
+          type: string
+          const: done
+        status:
+          type: string
+        session:
+          $ref: "#/components/schemas/SessionSnapshot"
+
+    CancelledEvent:
+      type: object
+      description: Terminal — turn cancelled (session may or may not survive).
+      required: [type, session]
+      properties:
+        run_complete:
+          type: boolean
+          description: All root turns and steering reconciliation have finished; deferred usage may follow.
+        turn_id:
+          type: string
+          description: Upstream root turn identity.
+        usage:
+          $ref: "#/components/schemas/TokenUsage"
+        type:
+          type: string
+          const: cancelled
+        session:
+          $ref: "#/components/schemas/SessionSnapshot"
+
+    ErrorEvent:
+      type: object
+      description: >
+        Terminal — turn failed. Established chats survive a failed turn and
+        stay retryable; code=expired means the upstream session is gone and
+        code=expired means the upstream session is gone; code=decayed means
+        the upstream session still retrieves as idle but can no longer run
+        turns (post-idle decay). Both are terminal; when forkable=true the
+        retained workspace can be cloned into a fresh sibling chat.
+      required: [type, message]
+      properties:
+        run_complete:
+          type: boolean
+          description: All root turns and steering reconciliation have finished; deferred usage may follow.
+        turn_id:
+          type: string
+          description: Upstream root turn identity.
+        usage:
+          $ref: "#/components/schemas/TokenUsage"
+        type:
+          type: string
+          const: error
+        message:
+          type: string
+        code:
+          type: string
+          enum: [expired, decayed]
+          description: Machine-readable failure class.
+        forkable:
+          type: boolean
+          description: Source workspace can be cloned into a fresh chat.
+        terminal:
+          type: boolean
+          description: Current thread must no longer accept prompts.
+
+    TokenUsage:
+      type: object
+      description: Root-agent tokens. Missing counters are omitted; cached and reasoning are contained subsets.
+      properties:
+        input_tokens:
+          type: integer
+        input_tokens_details:
+          type: object
+          properties:
+            cached_tokens:
+              type: integer
+        output_tokens:
+          type: integer
+        output_tokens_details:
+          type: object
+          properties:
+            reasoning_tokens:
+              type: integer
+        total_tokens:
+          type: integer
+
+    UsageEvent:
+      type: object
+      description: Deferred root usage retrieved after a terminal outcome; replaces usage for this turn.
+      required: [type, turn_id, usage]
+      properties:
+        type:
+          type: string
+          const: usage
+        turn_id:
+          type: string
+        usage:
+          $ref: "#/components/schemas/TokenUsage"

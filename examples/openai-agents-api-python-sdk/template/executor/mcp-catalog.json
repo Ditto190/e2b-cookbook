@@ -1,0 +1,6 @@
+[
+  { "id": "fetch", "name": "Fetch", "description": "Fetch a URL and extract its contents as markdown." },
+  { "id": "hackernews", "name": "Hacker News", "description": "Search and read Hacker News stories and comments." },
+  { "id": "markdownify", "name": "Markdownify", "description": "Convert PDF, DOCX, HTML and more into Markdown." },
+  { "id": "sequentialthinking", "name": "Sequential Thinking", "description": "Work a problem through explicit, revisable reasoning steps." }
+]

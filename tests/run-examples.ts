@@ -138,6 +138,11 @@ const scripts: {
 // this runner can only ever time out on them:
 //   flue-feedback-analyst-js, vercel-eve-feedback-analyst-js,
 //   nextjs-code-interpreter (next start), agentkit-coding-agent
+// OpenAI Agents API examples. The workbench is a Flask backend plus Vite
+// frontend that serve until killed; the webhook-managed one needs a publicly
+// reachable controller sandbox registered as an OpenAI webhook endpoint and
+// deploys its own E2B template. Neither is a script that exits on its own:
+//   openai-agents-api-python-sdk, openai-agents-api-python-sdk-webhook-managed
 
 const SANDBOX_TEST_DIRECTORY = '/home/user/example'
 const LOGS_DIRECTORY = 'logs'

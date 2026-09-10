@@ -1,0 +1,371 @@
+/* E2B design system (ui.e2b.dev). theme.css is the generated registry
+   artifact — never hand-edit it, re-sync with `shadcn add https://ui.e2b.dev/theme`.
+   This file holds only app-specific additions, expressed in E2B tokens. */
+@import "./theme.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "@fontsource/ibm-plex-mono/700.css";
+
+/* Streamdown styles itself with Tailwind utilities — scan its dist. */
+@source "../node_modules/streamdown/dist/*.js";
+@source "../node_modules/@streamdown/code/dist/*.js";
+
+:root {
+  /* Tertiary gray, one step more legible than the registry value (#707070):
+     4.7:1 on --bg was a borderline Lighthouse contrast pass — 6.4:1 now.
+     --icon-tertiary tracks it so header glyphs (Button paints svg with the
+     icon token, some toggles force the fg token) land on ONE gray. */
+  --fg-tertiary: #5c5c5c;
+  --icon-tertiary: #5c5c5c;
+
+  /* E2B look is flat — shadows are hairline separators, not depth. */
+  --shadow-card: 0 0 0 1px var(--stroke);
+  --shadow-float: 0 0 0 1px var(--stroke), 0 8px 24px -8px rgb(0 0 0 / 0.12);
+  /* Float shadow minus the hairline ring — for elements that already carry
+     their own border (e.g. secondary buttons), where ring + border reads as
+     one 2px-thick edge. */
+  --shadow-float-soft: 0 8px 24px -8px rgb(0 0 0 / 0.12);
+  --shadow-composer: 0 0 0 1px var(--stroke);
+  --shadow-composer-focus: 0 0 0 1px var(--stroke-active);
+  --shadow-inset: none;
+  --shadow-glow: none;
+
+  --ease-spring: cubic-bezier(0.23, 1, 0.32, 1); /* = anim-ease-appear */
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark {
+  /* One shade lighter than the registry #848484 — 5.3:1 → 7.5:1 on --bg. */
+  --fg-tertiary: #a0a0a0;
+  --icon-tertiary: #a0a0a0;
+
+  --shadow-float: 0 0 0 1px var(--stroke), 0 12px 32px -8px rgb(0 0 0 / 0.5);
+  --shadow-float-soft: 0 12px 32px -8px rgb(0 0 0 / 0.5);
+}
+
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  html {
+    overflow-x: hidden;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    line-height: 1.2;
+  }
+
+  p {
+    line-height: 1.6;
+  }
+}
+
+button:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+}
+
+@utility touch-pan-y {
+  touch-action: pan-y;
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ASCII spinner for the E2B Loader (ui/loader.tsx): animates ::before content
+   through | / - \ — discrete `content` animation, supported in all evergreen
+   browsers. */
+@keyframes terminal-spinner {
+  0% {
+    content: "|";
+  }
+  25% {
+    content: "/";
+  }
+  50% {
+    content: "-";
+  }
+  75% {
+    content: "\\";
+  }
+  100% {
+    content: "|";
+  }
+}
+
+@utility terminal-spinner {
+  &::before {
+    content: "|";
+    animation: terminal-spinner 0.4s linear infinite;
+  }
+}
+
+@utility fade-up {
+  animation: fade-up 0.25s var(--ease-spring) both;
+}
+
+@utility fade-in {
+  animation: fade-in 0.2s ease both;
+}
+
+@utility shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.04),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+@utility message-fade-in {
+  animation: message-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@layer base {
+  * {
+    scrollbar-color: var(--fill-highlight) transparent;
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--fill-highlight);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--stroke-active);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* Assistant-bubble markdown (Streamdown). Scoped via .assistant-md so nothing
+   leaks elsewhere. Retokenized to the E2B system: sharp corners, hairline
+   strokes, IBM Plex Mono for code. */
+/* Streamdown's chrome (copy buttons, image frames, modals, zoom controls)
+   ships its own rounded-* utilities. Those land in the Tailwind `utilities`
+   layer (via @source above), which cascades after `components` — so this
+   flatten rule must stay UNLAYERED to win. Unscoped from .assistant-md on
+   purpose: the fullscreen modal portals onto <body>, outside the bubble. */
+[data-streamdown],
+[data-streamdown] * {
+  border-radius: 0;
+}
+
+/* Streaming smoothness: each markdown block fades in ONCE when its DOM node
+   mounts. React keeps already-rendered nodes' identity across streamed
+   re-renders (Streamdown memoizes per block), so text appended inside an
+   existing paragraph never re-triggers this — only genuinely new blocks
+   animate. Word-level fade (à la ChatGPT) needs JS; this is the whole-CSS
+   version. `both` would flash-hide long blocks on archive replays too, so
+   `backwards` keeps finished transcripts instant after the first paint. */
+.assistant-md :is(p, li, pre, h1, h2, h3, h4, blockquote, table, hr) {
+  animation: fade-in 0.3s ease backwards;
+}
+
+/* Chat-scale code sizing. Streamdown's own text-sm/h-8/p-1 utilities also
+   land in the `utilities` layer, so these size/dim overrides must stay
+   unlayered as well — the layered rules below only carry surfaces. */
+.assistant-md [data-streamdown='code-block'] pre,
+.assistant-md [data-streamdown='code-block'] code {
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.assistant-md [data-streamdown='code-block-body'] {
+  padding: 0.625rem 0.75rem;
+}
+
+.assistant-md [data-streamdown='inline-code'] {
+  font-size: 11px;
+  padding: 0.1em 0.35em;
+}
+
+/* Quiet header strip: half the stock height, dimmed label and controls. */
+.assistant-md [data-streamdown='code-block-header'] {
+  height: 1.5rem;
+  font-size: 10px;
+  color: var(--fg-tertiary);
+}
+
+.assistant-md [data-streamdown='code-block-copy-button'],
+.assistant-md [data-streamdown='code-block-download-button'] {
+  padding: 0.125rem;
+  color: var(--fg-tertiary);
+}
+
+.assistant-md [data-streamdown='code-block-copy-button'] svg,
+.assistant-md [data-streamdown='code-block-download-button'] svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Streamdown's copy/download chip rides a sticky overlay strip sized for the
+   stock h-8 header (h-8, -mt-10) — with the header shrunk to 1.5rem above,
+   the chip lands below the label's midline. Re-pin the strip to the 1.5rem
+   header band so the chip centers on the language label, and slim the chip
+   itself to fit inside it. The strip has no data attr of its own — it's the
+   chip's direct parent, hence the :has(). */
+.assistant-md div:has(> [data-streamdown='code-block-actions']) {
+  height: 1.5rem;
+  /* header 1.5rem + the code block's 0.5rem child gap (stock -mt-10 =
+     h-8 header + the same gap) — lands the strip exactly on the header. */
+  margin-top: -2rem;
+  /* Stock strip is `sticky top-2` so the chip follows long code blocks while
+     scrolling — here it just drifts off the header near the viewport edge.
+     Pin it in the header instead. */
+  position: static;
+}
+
+.assistant-md [data-streamdown='code-block-actions'] {
+  padding: 0.125rem 0.375rem;
+}
+
+@layer components {
+  .assistant-md [data-streamdown="code-block"] {
+    border: 1px solid var(--stroke);
+  }
+
+  /* Shiki inlines its own theme background — flatten it onto the app bg.
+     Sizing lives in the unlayered block above. */
+  .assistant-md [data-streamdown="code-block"] pre,
+  .assistant-md [data-streamdown="code-block"] code {
+    background: transparent !important;
+    font-family: var(--font-mono);
+  }
+
+  .assistant-md [data-streamdown="inline-code"] {
+    background: var(--bg-highlight);
+    border: 1px solid var(--stroke);
+    font-family: var(--font-mono);
+  }
+
+  /* Chat-scale headings — a transcript is not a document, keep them close
+     to body size. */
+  .assistant-md :is([data-streamdown="heading-1"], [data-streamdown="heading-2"]) {
+    font-size: 15px;
+    font-weight: 600;
+    margin-top: 0.75rem;
+  }
+
+  .assistant-md :is([data-streamdown="heading-3"], [data-streamdown="heading-4"], [data-streamdown="heading-5"], [data-streamdown="heading-6"]) {
+    font-size: 13.5px;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  .assistant-md [data-streamdown="link"] {
+    color: var(--fg);
+    text-decoration: underline;
+    text-decoration-color: var(--fg-tertiary);
+    text-underline-offset: 3px;
+  }
+
+  .assistant-md [data-streamdown="link"]:hover {
+    text-decoration-color: var(--fg);
+  }
+
+  .assistant-md [data-streamdown="blockquote"] {
+    border-left: 2px solid var(--stroke);
+    color: var(--fg-tertiary);
+    padding-left: 0.75rem;
+    font-style: normal;
+  }
+
+  .assistant-md [data-streamdown="table-wrapper"] {
+    border: 1px solid var(--stroke);
+    overflow-x: auto;
+  }
+
+  .assistant-md [data-streamdown="table-header"] {
+    background: var(--bg-highlight);
+  }
+
+  .assistant-md :is([data-streamdown="unordered-list"], [data-streamdown="ordered-list"]) {
+    padding-left: 1.25rem;
+  }
+
+  .assistant-md [data-streamdown="list-item"] {
+    margin-top: 0.25rem;
+  }
+}

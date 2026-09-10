@@ -1,0 +1,19 @@
+{
+  "name": "openai-agents-api-python-sdk",
+  "version": "1.0.0",
+  "private": true,
+  "contributors": [
+    "Matthew Brockman",
+    "Ondrej Drapalik"
+  ],
+  "packageManager": "pnpm@10.34.4",
+  "scripts": {
+    "postinstall": "cd apps/backend && uv sync",
+    "dev": "bash scripts/dev.sh",
+    "gen": "pnpm --filter web gen",
+    "cleanup": "pnpm --recursive --no-bail cleanup",
+    "typecheck": "pnpm --recursive typecheck",
+    "build": "pnpm --filter web build",
+    "test": "pnpm --recursive --if-present test"
+  }
+}

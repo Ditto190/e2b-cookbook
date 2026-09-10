@@ -1,0 +1,12 @@
+{
+  "name": "backend",
+  "private": true,
+  "scripts": {
+    "dev": "uv run python app.py",
+    "sync": "uv sync",
+    "typecheck": "uv run python -c \"import app; print('backend imports ok')\"",
+    "cleanup": "uv run deptry . && uv run vulture",
+    "build": "echo 'backend: nothing to build'",
+    "test": "uv run python -m unittest discover"
+  }
+}
