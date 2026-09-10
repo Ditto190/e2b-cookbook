@@ -226,7 +226,7 @@ class StreamingTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(stored["entries"]), 1)
             self.assertEqual(len(stored["ledger"]), 1)
             results = [event for payload in self.payloads for event in payload["events"]
-                       if event["type"] == "session.input.tool_result"]
+                       if event["type"] == "agent.session.input.tool_result"]
             self.assertEqual(len(results), 3)
             self.assertTrue(all(result == results[0] for result in results))
             self.assertEqual(results[0]["turn_id"], "turn_test")
@@ -467,11 +467,11 @@ class CapabilityChatTest(unittest.TestCase):
             payload = json.loads(request.content) if request.content else None
             self.requests.append((request.method, request.url.path, payload))
             if payload and self.on_tool_result and any(
-                event["type"] == "session.input.tool_result" for event in payload.get("events", [])
+                event["type"] == "agent.session.input.tool_result" for event in payload.get("events", [])
             ):
                 self.on_tool_result()
             if payload and self.tool_result_failures and any(
-                event["type"] == "session.input.tool_result" for event in payload.get("events", [])
+                event["type"] == "agent.session.input.tool_result" for event in payload.get("events", [])
             ):
                 self.tool_result_failures -= 1
                 raise httpx.ReadError("tool result response lost")
@@ -839,7 +839,7 @@ class CapabilityChatTest(unittest.TestCase):
     def tool_results(self):
         return [event for method, path, body in self.requests
                 if method == "POST" and path.endswith("/events")
-                for event in body["events"] if event["type"] == "session.input.tool_result"]
+                for event in body["events"] if event["type"] == "agent.session.input.tool_result"]
 
     def test_pending_memory_save_replay_uses_durable_ledger(self):
         action = self.memory_action()
@@ -1648,7 +1648,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
                     body = json.loads(request.content)["events"][0]
                     self.posts.append(body)
                     self.post_keys.append(request.headers.get("Idempotency-Key"))
-                    if body["type"] == "session.input.cancel":
+                    if body["type"] == "agent.session.input.cancel":
                         cancelled.set()
                         if cancel_failure:
                             return httpx.Response(409, json={"error": {"code": "conflict_error", "message": "cancel rejected"}})
@@ -1770,7 +1770,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
         await self.scenario(retained=("focus",))
         self.assertEqual(self.responses[0].status_code, 200)
         self.assertEqual(self.posts[1], {
-            "type": "session.input.message",
+            "type": "agent.session.input.message",
             "input": [{"type": "message", "role": "user", "content": [{"type": "input_text", "text": "focus"}]}],
         })
         self.assertEqual(self.duplicate.status_code, 200)
@@ -1898,7 +1898,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
         await self.scenario(later=(("turn_late", None, "focus"),), later_live=True, cancel_reconciliation=True)
         self.assertEqual(len(self.archive["turns"]), 2)
         self.assertEqual(self.archive["turns"][1]["outcome"], "cancelled")
-        self.assertEqual(self.posts[-1]["type"], "session.input.cancel")
+        self.assertEqual(self.posts[-1]["type"], "agent.session.input.cancel")
         self.assertEqual(self.events[-1]["type"], "cancelled")
 
     async def test_paginated_items_and_turns_reconcile_then_adopt_in_order(self):
@@ -1940,7 +1940,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(adopted["usage"], {"output_tokens": 7})
         self.assertEqual(adopted["reasoning"], "Adopted summary [redacted]")
         self.assertEqual([entry["text"] for entry in self.memories], ["Remember [redacted]"])
-        results = [e for e in self.posts if e["type"] == "session.input.tool_result"]
+        results = [e for e in self.posts if e["type"] == "agent.session.input.tool_result"]
         self.assertEqual(len(results), 1)
         self.assertEqual(results[0]["turn_id"], "turn_late")
 
@@ -1970,7 +1970,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
     async def test_stop_cancels_pending_lifecycle_retry(self):
         await self.scenario(lifecycle_rejections=100, cancel=True)
         self.assertEqual(self.archive["turns"][0]["interjections"][0]["status"], "cancelled")
-        self.assertEqual(len([p for p in self.posts if p["type"] == "session.input.message"]), 2)
+        self.assertEqual(len([p for p in self.posts if p["type"] == "agent.session.input.message"]), 2)
 
     async def test_lifecycle_retry_is_bounded_and_rejected_text_is_not_evidence(self):
         await self.scenario(lifecycle_rejections=100, retained=("focus",))
@@ -1982,7 +1982,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_stop_prevents_retries_while_remote_cancellation_drains(self):
         await self.scenario(lifecycle_rejections=100, cancel=True, cancel_delay=0.08)
-        self.assertEqual(len([p for p in self.posts if p["type"] == "session.input.message"]), 2)
+        self.assertEqual(len([p for p in self.posts if p["type"] == "agent.session.input.message"]), 2)
         self.assertEqual(self.archive["turns"][0]["interjections"][0]["status"], "cancelled")
 
     async def test_delayed_lifecycle_rejection_cannot_consume_another_submissions_evidence(self):
@@ -1993,7 +1993,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
     async def test_failed_stop_cancels_old_retries_but_allows_new_steering(self):
         await self.scenario(lifecycle_rejections=1, cancel=True, cancel_failure=True, retained=("fresh",))
         self.assertEqual(self.after_failed_cancel.status_code, 200)
-        self.assertEqual(len([p for p in self.posts if p["type"] == "session.input.message"]), 3)
+        self.assertEqual(len([p for p in self.posts if p["type"] == "agent.session.input.message"]), 3)
         self.assertEqual([row["status"] for row in self.archive["turns"][0]["interjections"]], ["cancelled", "confirmed"])
 
     async def test_parent_guard_conflict_retries_same_key_then_adopts_once(self):
@@ -2041,7 +2041,7 @@ class SteeringTest(unittest.IsolatedAsyncioTestCase):
         for stop in (False, True):
             with self.subTest(stop=stop):
                 await self.scenario(retry_conflicts=("session changed during parent-guarded runtime write",) * 100, cancel=stop, cancel_delay=0.08)
-                message_keys = [key for post, key in zip(self.posts[1:], self.post_keys[1:]) if post["type"] == "session.input.message"]
+                message_keys = [key for post, key in zip(self.posts[1:], self.post_keys[1:]) if post["type"] == "agent.session.input.message"]
                 self.assertEqual(len(set(message_keys)), 1)
                 self.assertLess(len(message_keys), 20)
                 self.assertEqual(self.archive["turns"][0]["interjections"][0]["status"], "cancelled" if stop else "refused")

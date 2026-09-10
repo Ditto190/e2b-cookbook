@@ -33,6 +33,7 @@ class _AgentAPIClient:
             {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
+                "OpenAI-Beta": "agents=v1",
             }
         )
         if organization is not None:
