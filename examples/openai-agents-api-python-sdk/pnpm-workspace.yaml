@@ -1,0 +1,6 @@
+packages:
+  - apps/*
+  - template
+
+# Supply-chain gate: skip registry versions younger than 7 days.
+minimumReleaseAge: 10080

@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="/favicon-light.ico" media="(prefers-color-scheme: light)" sizes="any" />
+    <link rel="icon" href="/favicon-dark.ico" media="(prefers-color-scheme: dark)" sizes="any" />
+    <title>Agents API Python SDK</title>
+  </head>
+  <body>
+    <script>
+      'use strict'
+      // Default light unless the user explicitly picked dark — the runtime
+      // theme toggle in the header keeps localStorage in sync.
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark')
+      }
+    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

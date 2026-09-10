@@ -1,0 +1,27 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "ignore": {
+    // Vendored surfaces — regenerated, never hand-edited:
+    // - ui/primitives/icons: Figma-synced E2B icon set (full set kept on purpose)
+    // - components/brand.tsx: owned by the ui.e2b.dev shadcn registry, overwritten on re-add
+    "files": ["src/ui/primitives/icons/**", "src/components/brand.tsx"],
+    "overrides": [
+      {
+        // shadcn/cva components export their variant recipes by design.
+        "files": ["src/components/ui/**"],
+        "rules": ["react-doctor/only-export-components"]
+      },
+      {
+        // TanStack route files colocate their small error/404 components.
+        "files": ["src/routes/**"],
+        "rules": ["react-doctor/no-multi-comp"]
+      },
+      {
+        // Chat rows are div[role=button] on purpose: each row nests a real
+        // copy button (SandboxIdChip) and <button> can't contain buttons.
+        "files": ["src/components/app-sidebar.tsx"],
+        "rules": ["react-doctor/prefer-tag-over-role"]
+      }
+    ]
+  }
+}

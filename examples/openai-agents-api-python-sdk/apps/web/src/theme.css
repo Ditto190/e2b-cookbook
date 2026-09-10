@@ -1,0 +1,290 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@layer base {
+  * {
+    @apply border-stroke ring-ring outline-ring;
+  }
+
+  body {
+    @apply bg-bg text-fg !text-body;
+  }
+}
+
+:root {
+  /* Light theme */
+  --bg: #FAFAFA;
+  --bg-1: #F5F5F5;
+  --bg-hover: #F5F5F5;
+  --bg-highlight: #F2F2F2;
+  --bg-inverted: #0A0A0A;
+  --bg-inverted-hover: #292929;
+
+  --fill: #EBEBEB;
+  --fill-highlight: #D6D6D6;
+
+  --stroke: #D6D6D6;
+  --stroke-active: #C2C2C2;
+
+  --fg: #0a0a0a;
+  --fg-secondary: #333333;
+  --fg-tertiary: #707070;
+  --fg-inverted: #FFFFFF;
+
+  --icon: #0a0a0a;
+  --icon-secondary: #333333;
+  --icon-tertiary: #707070;
+  --icon-inverted: #FFFFFF;
+
+  --accent-main-highlight: #e56f00;
+  --accent-main-hover: #D36600;
+  --accent-main-code-highlight: #F5C599;
+  --accent-main-bg: #e56f0029;
+
+  --accent-positive-highlight: #00a670;
+  --accent-positive-bg: #00a67029;
+
+  --accent-info-highlight: #3C98C7;
+  --accent-info-bg: #3d99c733;
+  --accent-info-bg-large: #3d99c71a;
+
+  --accent-warning-highlight: #D1A102;
+  --accent-warning-bg: rgba(209, 161, 2, 0.14);
+  --accent-warning-bg-large: rgba(209, 161, 2, 0.08);
+
+  --accent-error-highlight: #FF4400;
+  --accent-error-bg: rgba(255, 68, 0, 0.16);
+  --accent-error-bg-large: rgba(255, 68, 0, 0.08);
+
+  --accent-secondary-error-highlight: #FF8763;
+  --accent-secondary-error-bg: rgb(255, 135, 99, 0.16);
+}
+
+.dark {
+  /* Dark theme */
+  --bg: #0A0A0A;
+  --bg-1: #141414;
+  --bg-hover: #141414;
+  --bg-highlight: #1F1F1F;
+  --bg-inverted: #FFFFFF;
+  --bg-inverted-hover: #EBEBEB;
+
+  --fill: #292929;
+  --fill-highlight: #383838;
+
+  --stroke: #292929;
+  --stroke-active: #424242;
+
+  --fg: #FFFFFF;
+  --fg-secondary: #E0E0E0;
+  --fg-tertiary: #848484;
+  --fg-inverted: #0A0A0A;
+
+  --icon: #FFFFFF;
+  --icon-secondary: #E0E0E0;
+  --icon-tertiary: #848484;
+  --icon-inverted: #0A0A0A;
+
+  --accent-main-highlight: #FF8800;
+  --accent-main-hover: #EB7E01;
+  --accent-main-code-highlight: #6C3C06;
+  --accent-main-bg: rgba(255, 136, 0, 0.16);
+
+  --accent-positive-highlight: #00D992;
+  --accent-positive-bg: rgba(0, 217, 146, 0.16);
+
+  --accent-info-highlight: #59A8E1;
+  --accent-info-bg: rgba(89, 168, 225, 0.22);
+  --accent-info-bg-large: rgba(89, 168, 225, 0.12);
+
+  --accent-warning-highlight: #FFFF00;
+  --accent-warning-bg: rgba(255, 255, 0, 0.16);
+  --accent-warning-bg-large: rgba(255, 255, 0, 0.08);
+
+  --accent-error-highlight: #F54545;
+  --accent-error-bg: rgba(245, 69, 69, 0.16);
+  --accent-error-bg-large: rgba(245, 69, 69, 0.08);
+
+  --accent-secondary-error-highlight: #FF8763;
+  --accent-secondary-error-bg: rgba(255, 135, 99, 0.16);
+}
+
+@theme {
+  /* Colors */
+  --color-ring: var(--stroke-active);
+
+  --color-bg: var(--bg);
+  --color-bg-1: var(--bg-1);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-highlight: var(--bg-highlight);
+  --color-bg-inverted: var(--bg-inverted);
+  --color-bg-inverted-hover: var(--bg-inverted-hover);
+
+  --color-fg: var(--fg);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-inverted: var(--fg-inverted);
+
+  --color-fill: var(--fill);
+  --color-fill-highlight: var(--fill-highlight);
+
+  --color-icon: var(--icon);
+  --color-icon-secondary: var(--icon-secondary);
+  --color-icon-tertiary: var(--icon-tertiary);
+  --color-icon-inverted: var(--icon-inverted);
+
+  --color-stroke: var(--stroke);
+  --color-stroke-active: var(--stroke-active);
+
+  --color-accent-main-highlight: var(--accent-main-highlight);
+  --color-accent-main-hover: var(--accent-main-hover);
+  --color-accent-main-code-highlight: var(--accent-main-code-highlight);
+  --color-accent-main-bg: var(--accent-main-bg);
+
+  --color-accent-positive-highlight: var(--accent-positive-highlight);
+  --color-accent-positive-bg: var(--accent-positive-bg);
+
+  --color-accent-info-highlight: var(--accent-info-highlight);
+  --color-accent-info-bg: var(--accent-info-bg);
+  --color-accent-info-bg-large: var(--accent-info-bg-large);
+
+  --color-accent-warning-highlight: var(--accent-warning-highlight);
+  --color-accent-warning-bg: var(--accent-warning-bg);
+  --color-accent-warning-bg-large: var(--accent-warning-bg-large);
+
+  --color-accent-error-highlight: var(--accent-error-highlight);
+  --color-accent-error-bg: var(--accent-error-bg);
+  --color-accent-error-bg-large: var(--accent-error-bg-large);
+
+  --color-accent-secondary-error-highlight: var(--accent-secondary-error-highlight);
+  --color-accent-secondary-error-bg: var(--accent-secondary-error-bg);
+
+  /* Font Family */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Typography utilities */
+@utility text-headline {
+  font-size: 1.25rem; /* 20px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 700;
+}
+
+@utility text-headline-small {
+  font-size: 1rem; /* 16px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 700;
+}
+
+@utility text-label {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.0625rem; /* 17px */
+  font-weight: 400;
+}
+
+@utility text-label-highlight {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.0625rem; /* 17px */
+  font-weight: 500;
+}
+
+@utility text-label-numeric {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.0625rem; /* 17px */
+  font-weight: 400;
+}
+
+@utility text-label-numeric-highlight {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.0625rem; /* 17px */
+  font-weight: 500;
+}
+
+@utility text-body-highlight {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 500;
+}
+
+@utility text-body {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 400;
+}
+
+@utility text-body-numeric {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 400;
+}
+
+@utility text-body-numeric-highlight {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 500;
+}
+
+@utility text-table-highlight {
+  font-size: 0.8125rem; /* 13px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 500;
+}
+
+@utility text-table {
+  font-size: 0.8125rem; /* 13px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 400;
+}
+
+@utility text-table-numeric {
+  font-size: 0.8125rem; /* 13px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 400;
+}
+
+@utility text-value-big {
+  font-size: 2rem; /* 32px */
+  line-height: 2rem; /* 32px */
+  font-weight: 700;
+}
+
+@utility text-value-small {
+  font-size: 1rem; /* 16px */
+  line-height: 1.25rem; /* 20px */
+  font-weight: 700;
+}
+
+/* Animation easing utilities */
+@utility anim-ease-appear {
+  --tw-ease: cubic-bezier(0.23, 1, 0.32, 1); /* ease-out-quint */
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@utility anim-ease-transform {
+  --tw-ease: cubic-bezier(0.79, 0.14, 0.15, 0.86); /* ease-in-out-circ */
+  transition-timing-function: cubic-bezier(0.79, 0.14, 0.15, 0.86);
+}
+
+/* Animation duration utilities */
+@utility anim-duration-fast {
+  --tw-duration: 150ms;
+  transition-duration: 150ms;
+}
+
+@utility anim-duration-normal {
+  --tw-duration: 200ms;
+  transition-duration: 200ms;
+}
+
+@utility anim-duration-slow {
+  --tw-duration: 300ms;
+  transition-duration: 300ms;
+}
+
+@utility anim-duration-debug {
+  --tw-duration: 3000ms;
+  transition-duration: 3000ms;
+}
