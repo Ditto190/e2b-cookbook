@@ -12,7 +12,7 @@ Authors: Matthew Brockman & Ondrej Drapalik
 Each chat:
 
 1. Creates a self-hosted Agents API session (`https://api.openai.com/v1/agents`).
-2. Creates an E2B sandbox from the public `e2b/openai-agents-api-executor`
+2. Creates an E2B sandbox from the public `e2b/openai-agents-api-python-sdk-executor`
    template (codex preinstalled, see `template/executor`; override with
    `E2B_AGENTS_TEMPLATE`).
 3. Starts `codex exec-server --remote … --environment-id …` inside the sandbox

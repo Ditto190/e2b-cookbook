@@ -27,12 +27,12 @@ config({
   quiet: true,
 })
 
-// Public template under the E2B org (e2b/openai-agents-api).
+// Public template under the E2B org (e2b/openai-agents-api-python-sdk).
 // E2B aliases don't allow spaces/& — display name lives in the dashboard.
 const TEMPLATE_NAME =
-  process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api'
+  process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-python-sdk'
 const EXECUTOR_TEMPLATE =
-  process.env.E2B_EXECUTOR_TEMPLATE || 'e2b/openai-agents-api-executor'
+  process.env.E2B_EXECUTOR_TEMPLATE || 'e2b/openai-agents-api-python-sdk-executor'
 // Executors normally come from template/executor; codex stays baked in here
 // so E2B_AGENTS_TEMPLATE can still point the backend at this image. Keep the
 // pin in sync with template/executor/build.ts.

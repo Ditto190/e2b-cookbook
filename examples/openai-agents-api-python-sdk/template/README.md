@@ -10,20 +10,13 @@ the per-chat sandboxes.
 
 | Alias | Role | Build |
 | --- | --- | --- |
-| `e2b/openai-agents-api` | the workbench: backend + UI in one sandbox, spawns one executor sandbox per chat | `npx tsx template/build.ts` |
-| `e2b/openai-agents-api-executor` | one worker per chat: `codex exec-server` baked in, no start command | `npx tsx template/executor/build.ts`, see [executor/README.md](executor/README.md) |
+| `e2b/openai-agents-api-python-sdk` | the workbench: backend + UI in one sandbox, spawns one executor sandbox per chat | `npx tsx template/build.ts` |
+| `e2b/openai-agents-api-python-sdk-executor` | one worker per chat: `codex exec-server` baked in, no start command | `npx tsx template/executor/build.ts`, see [executor/README.md](executor/README.md) |
 
 The rest of this file covers the workbench template.
 
-The Python SDK aliases can be rebuilt from the same source. Pair the app
-with its executor explicitly:
-
-```sh
-E2B_TEMPLATE_NAME=e2b/openai-agents-api-python-sdk-executor pnpm --filter agents-api-workbench-template build:executor
-E2B_TEMPLATE_NAME=e2b/openai-agents-api-python-sdk E2B_EXECUTOR_TEMPLATE=e2b/openai-agents-api-python-sdk-executor pnpm --filter agents-api-workbench-template build
-```
-
-Use the same environment variables with `verify:executor` and `verify`.
+Override aliases per build with `E2B_TEMPLATE_NAME` (and `E2B_EXECUTOR_TEMPLATE`
+for the workbench); `verify` and `verify:executor` read the same variables.
 
 ## Build
 
@@ -40,7 +33,7 @@ Flask serves the static build at runtime anyway). The image installs only
 `E2B_API_KEY` is loaded from `apps/backend/.env`; the template lands in that
 key's team — export `E2B_API_KEY` before running to target a different org
 (env wins over `.env`). Alias:
-`openai-agents-api` (public as `e2b/openai-agents-api`;
+`openai-agents-api-python-sdk` (public as `e2b/openai-agents-api-python-sdk`;
 E2B aliases don't allow spaces or `&`). Override per build with
 `E2B_TEMPLATE_NAME` / `E2B_BUILD_TAG`.
 
