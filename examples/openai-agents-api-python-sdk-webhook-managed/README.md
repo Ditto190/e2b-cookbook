@@ -11,7 +11,10 @@ This is the E2B variant of OpenAI's
 relative path; `handler.py` creates workers from the
 `openai-agents-api-python-sdk-webhook-managed` E2B template instead of the base
 image, and pauses a failed session's worker where upstream kills it, so the
-sandbox can be inspected afterwards). For the application-managed alternative, where
+sandbox can be inspected afterwards). Both `client.py` and `handler.py` also send
+`OpenAI-Beta: agents=v1`, which the Agents API now requires (`400 invalid_beta`
+without it) and the preview SDK does not add yet, and `client.py` rewrites input
+events to the renamed `agent.session.input.*` types the API now expects. For the application-managed alternative, where
 your own process provisions the sandbox, see the sibling
 [openai-agents-api-python-sdk](../openai-agents-api-python-sdk) workbench.
 

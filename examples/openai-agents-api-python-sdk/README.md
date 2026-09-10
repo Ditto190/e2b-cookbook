@@ -99,13 +99,13 @@ hand-parses SSE frames but yields only that generated type.
 ## Run inside an E2B sandbox
 
 The [template/](template/README.md) directory builds this app into the public
-E2B template `e2b/openai-agents-api`: backend + prebuilt frontend
+E2B template `e2b/openai-agents-api-python-sdk`: backend + prebuilt frontend
 running in one sandbox on port `8000`, with a terminal welcome banner that
 prints the demo link. No credentials are baked into the image — the key gate
 collects them at runtime.
 
 Each chat's agent runs in its own sandbox from the sibling template
-`e2b/openai-agents-api-executor` (`codex exec-server` baked in, no
+`e2b/openai-agents-api-python-sdk-executor` (`codex exec-server` baked in, no
 start command); see [template/executor/README.md](template/executor/README.md).
 
 ## Authors

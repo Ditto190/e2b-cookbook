@@ -51,7 +51,11 @@ async def reconcile(session_id: str) -> None:
     async with httpx.AsyncClient(timeout=30) as client:
         response = await client.get(
             f"https://api.openai.com/v1/agents/sessions/{session_id}",
-            headers={"Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}"},
+            headers={
+                "Authorization": f"Bearer {os.environ['OPENAI_API_KEY']}",
+                # Required by the Agents API; requests without it get 400 invalid_beta.
+                "OpenAI-Beta": "agents=v1",
+            },
         )
         if response.status_code == 404:
             return

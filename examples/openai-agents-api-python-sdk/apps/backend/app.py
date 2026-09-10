@@ -2,7 +2,7 @@
 
 Flask app that pairs each chat with a self-hosted OpenAI Agents API session
 and an E2B sandbox: the sandbox is created from the public
-`e2b/openai-agents-api-executor` template (E2B_AGENTS_TEMPLATE
+`e2b/openai-agents-api-python-sdk-executor` template (E2B_AGENTS_TEMPLATE
 overrides)
 and runs `codex exec-server` inside it as the session's executor. Turns
 stream to the React frontend over SSE; the workspace viewer reads /workspace
@@ -99,11 +99,11 @@ REASONING_EFFORTS = frozenset(get_args(ReasoningEffort))
 VERBOSITIES = frozenset(get_args(Verbosity))
 SERVICE_TIERS = frozenset(get_args(ServiceTier))
 MODEL_ID_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
-# Public e2b/openai-agents-api-executor: codex exec-server baked in,
+# Public e2b/openai-agents-api-python-sdk-executor: codex exec-server baked in,
 # no start command, one per chat (template/executor). The workbench's own
 # image still carries codex, so E2B_AGENTS_TEMPLATE can point back at it.
 E2B_TEMPLATE = os.environ.get(
-    "E2B_AGENTS_TEMPLATE", "e2b/openai-agents-api-executor"
+    "E2B_AGENTS_TEMPLATE", "e2b/openai-agents-api-python-sdk-executor"
 )
 WORKSPACE = "/workspace"
 SANDBOX_TTL_SECONDS = 15 * 60

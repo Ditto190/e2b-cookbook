@@ -27,9 +27,9 @@ config({
   quiet: true,
 })
 
-// Public template under the E2B org (e2b/openai-agents-api-executor).
+// Public template under the E2B org (e2b/openai-agents-api-python-sdk-executor).
 const TEMPLATE_NAME =
-  process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-executor'
+  process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-python-sdk-executor'
 // Same pin as the workbench template (template/build.ts): the version the
 // backend is known to work against.
 const CODEX_VERSION = '0.145.0-alpha.24'

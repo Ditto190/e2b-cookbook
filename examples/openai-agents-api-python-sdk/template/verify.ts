@@ -8,7 +8,7 @@ import assert from 'node:assert/strict'
 
 config({ path: join(import.meta.dirname, '..', 'apps/backend/.env'), quiet: true })
 
-const TEMPLATE = process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api'
+const TEMPLATE = process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-python-sdk'
 
 const sbx = await Sandbox.create(TEMPLATE, { timeoutMs: 300_000 })
 console.log('sandbox:', sbx.sandboxId)
@@ -109,7 +109,7 @@ for path in Path('/proc').glob('[0-9]*/cmdline'):
 else:
     raise AssertionError('Running backend process not found')
 PY`, { user: 'root' })
-  assert.equal(runtime.stdout.trim(), process.env.E2B_EXECUTOR_TEMPLATE || 'e2b/openai-agents-api-executor')
+  assert.equal(runtime.stdout.trim(), process.env.E2B_EXECUTOR_TEMPLATE || 'e2b/openai-agents-api-python-sdk-executor')
   await sbx.commands.run('test ! -f /opt/workbench/apps/backend/.env && test ! -f /opt/workbench/apps/backend/chats-state.json && test ! -f /opt/workbench/apps/backend/shared-memory.json')
   console.log('Executor default and clean template filesystem: passed')
 

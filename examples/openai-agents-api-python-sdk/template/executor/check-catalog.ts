@@ -4,7 +4,7 @@ import { Sandbox } from 'e2b'
 import { config } from 'dotenv'
 import { join } from 'node:path'
 config({ path: join(import.meta.dirname, '../../apps/backend/.env'), quiet: true })
-const sandbox = await Sandbox.create(process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-executor', { timeoutMs: 300_000 })
+const sandbox = await Sandbox.create(process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-python-sdk-executor', { timeoutMs: 300_000 })
 console.log('Check sandbox:', sandbox.sandboxId)
 try {
   const repair = readFileSync(join(import.meta.dirname, '../../apps/backend/mcp_gateway_compat.py'), 'utf8')

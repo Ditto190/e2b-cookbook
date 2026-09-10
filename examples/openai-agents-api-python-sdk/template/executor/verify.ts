@@ -9,7 +9,7 @@ import assert from 'node:assert/strict'
 config({ path: join(import.meta.dirname, '..', '..', 'apps/backend/.env'), quiet: true })
 
 const TEMPLATE =
-  process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-executor'
+  process.env.E2B_TEMPLATE_NAME || 'e2b/openai-agents-api-python-sdk-executor'
 
 const sbx = await Sandbox.create(TEMPLATE, { timeoutMs: 120_000 })
 console.log('sandbox:', sbx.sandboxId)

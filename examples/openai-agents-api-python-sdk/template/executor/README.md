@@ -25,8 +25,8 @@ npx tsx template/executor/verify.ts # spawns one sandbox, checks the runtime, ki
 ```
 
 `E2B_API_KEY` is loaded from `apps/backend/.env` (env wins over `.env`).
-Alias: `openai-agents-api-executor` (public as
-`e2b/openai-agents-api-executor`). Override per build with
+Alias: `openai-agents-api-python-sdk-executor` (public as
+`e2b/openai-agents-api-python-sdk-executor`). Override per build with
 `E2B_TEMPLATE_NAME` / `E2B_BUILD_TAG`.
 
 ## Why a separate image
