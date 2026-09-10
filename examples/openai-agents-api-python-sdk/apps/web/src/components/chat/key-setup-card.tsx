@@ -196,7 +196,7 @@ export function KeySetupCard({
               hint={health.data.has_executor_key
                 ? "Leave blank to keep the current executor key. Used by the agent inside the sandbox."
                 : "Optional. Used by the agent inside the sandbox. Use the same OpenAI project; leave blank to reuse the key above."}
-              href="https://platform.openai.com/api-keys"
+              href="https://platform.openai.com/agents?tab=environments&environment_view=keys"
               hrefLabel="Scoped project key"
               label="OpenAI executor key"
               onChange={setExecutorKey}
