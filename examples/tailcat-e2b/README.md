@@ -18,7 +18,7 @@ E2B sandboxes use Tailcat's DERP relay with their stock network configuration. T
 
 ## Setup
 
-Both versions read `E2B_API_KEY` from a `.env` file (copy `.env.template`). `laptop-sandbox-file-transfer` and `sandbox-tests-local-dev-server` also need tailcat on your machine: `brew install tailcat`, or see the [install options](https://github.com/tailscale/tailcat#install).
+Both versions read `E2B_API_KEY` from a `.env` file (copy `.env.template`). `laptop-sandbox-file-transfer` and `sandbox-tests-local-dev-server` also need tailcat 0.6.0 or newer on your machine: `brew install tailcat`, or see the [install options](https://github.com/tailscale/tailcat/blob/main/INSTALL.md). The template pins the same version. Keep the two in step: since 0.6.0 an address carries a WireGuard pre-shared key that older clients cannot use, and tailcat makes no wire-format stability promises.
 
 Build the `tailcat` template once per team, from either language (about one minute):
 
@@ -46,16 +46,16 @@ poetry run sandbox-to-sandbox   # also `poetry run start`
 poetry run sandbox-tests-local-dev-server
 ```
 
-`DEMO_FILE_SIZE_MIB` changes the transferred file size. It defaults to 50 MiB for `laptop-sandbox-file-transfer` and 10 MiB for `sandbox-to-sandbox`. These examples demonstrate the flow rather than benchmark the public relay.
+`DEMO_FILE_SIZE_MIB` changes the transferred file size. It defaults to 10 MiB in both file-transfer demos. These examples demonstrate the flow rather than benchmark the public relay.
 
 ## What happens in each demo
 
-The runnable scripts are 124–155 lines in Python and 151–191 lines in TypeScript. They are deliberately a little longer so the Tailcat commands, checksums, timing and result handling stay visible where they are used. Reusable infrastructure is split by responsibility: `e2bSandbox` adapts the E2B SDK, while `tailcatServer` owns listener processes and address readiness.
+The runnable scripts keep the Tailcat commands, checksums, timing and result handling visible where they are used. Reusable infrastructure is split by responsibility: `e2bSandbox` adapts the E2B SDK, while `tailcatServer` owns listener processes and address readiness.
 
 ### Laptop and sandbox exchange files
 
 ```text
-create a temporary 50 MiB file on the laptop
+create a temporary 10 MiB file on the laptop
 create a sandbox and start its write-only receiver
 copy input.bin from laptop to sandbox
 compare the local and sandbox MD5 hashes; stop on a mismatch
@@ -101,7 +101,7 @@ This is the most practical agent-development example: code running remotely can 
 - `handleLocalHttpRequest` / `LocalRequestHandler.do_GET` handles the three HTTP routes used by the local-service demo.
 - `readAddressFile` and `readServerLog` are passed to `waitForTailcatAddress`; the helper calls them while waiting for a listener to become ready.
 - Every started listener returns a named `stop` callback. Each demo calls it from `finally`, so a failed checksum or request does not leave a process running.
-- The Python SDK's background stderr callback was unreliable during the spike, so neither implementation depends on it. Both poll Tailcat's documented `TAILCAT_ADDR_FILE` instead.
+- Neither implementation depends on the SDK's background stderr callbacks. Both poll Tailcat's documented `TAILCAT_ADDR_FILE` instead.
 
 ## How it fits together
 
@@ -118,7 +118,7 @@ js/                                   python/
 
 - The **template** installs tailcat from the GitHub release, plus `openssh-client` (tailcat drives the system scp and ssh), `socat` for local port forwarding, and Python for formatting the generated JSON report.
 - **e2bSandbox** creates the sandbox and turns E2B command results into a small, consistent shape.
-- **tailcatServer** starts a listener in a sandbox or on the laptop, reads its address and waits until it answers through DERP.
+- **tailcatServer** starts a listener in a sandbox or on the laptop, reads its address and pings it through DERP until it answers. A one-shot listener (bare `tailcat`) can also be waited on for its stdout.
 - Each **script** keeps its Tailcat client commands, checksums, timing and result handling beside the flow they explain. The two languages follow the same steps without forcing line-for-line parity.
 
 ## Quirks you need to know about
@@ -127,22 +127,23 @@ Two Tailcat details are worth handling explicitly.
 
 ### 1. tailcat prints its address before it is reachable
 
-The address appears on stderr as soon as the key exists, but the listener needs another one to three seconds to connect to the DERP relay. A client that connects in that window logs `derp-303 does not know about peer` and its 10 s deadline expires. `waitUntilReachable` / `wait_until_reachable` pings with a 3 s timeout until the listener answers. The same applies to `tailcat cp` and `tailcat ssh`, which do an internal ping first.
+The address appears on stderr as soon as the key exists, but the listener needs another one to three seconds to connect to the DERP relay. A client that connects in that window logs `derp-303 does not know about peer`. Since tailcat 0.6.0 the client resends its rendezvous ping every second for up to 10 s, which usually absorbs the gap, but the public relay can take longer, so `waitUntilReachable` / `wait_until_reachable` repeats `tailcat ping --timeout 10s` for up to a minute before the first transfer and fails with the last ping output otherwise. `tailcat cp` and `tailcat ssh` do the same internal ping first.
 
 ### 2. Reading the address from the SDK
 
-Background commands in the Python SDK did not deliver stderr callbacks reliably in this setup, and polling a file is the same code in both languages. tailcat offers two clean alternatives: `TAILCAT_ADDR_FILE=/path` writes the address to a file, and `--json` prints `{"listenAddr": ...}` on stdout. The helper uses the file.
+Polling a file is the same code in both languages and does not depend on how each SDK streams a background command's stderr. tailcat offers two clean alternatives: `TAILCAT_ADDR_FILE=/path` writes the address to a file, and `--json` prints `{"listenAddr": ...}` on stdout. The helper uses the file.
 
 ## What tailcat gives you here
 
 - **Encrypted transfers that bypass the E2B API.** Files or directories move over WireGuard through DERP, with `cp`, `ls` and `recv` semantics and no public URL.
-- **Sandbox to sandbox networking.** E2B does not route between sandboxes. Two sandboxes that hold each other's tailcat address can exchange encrypted traffic through the relay.
+- **Sandbox to sandbox networking.** E2B has no private network between sandboxes; without Tailcat, one sandbox reaches another only through a port exposed on its public sandbox URL. Two sandboxes that hold each other's tailcat address can exchange encrypted traffic through the relay instead.
 - **Test a local development server from a sandbox.** With `tailcat serve --allow=<sandbox key> <port>` on the laptop, an agent or test runner in the sandbox can exercise your local app before it is deployed, and only that sandbox can connect.
 - **Shell access.** `tailcat serve no-auth-ssh` in the sandbox and `tailcat ssh <addr>` from anywhere, no key setup.
 
 ## Limits
 
-- These demos intentionally use the public DERP relays at `tailcat.dev` for sandbox traffic. They are free, rate limited and have no SLA.
+- A tailcat address is a bearer credential: whoever holds it can connect to that listener and do whatever it serves (read a shared directory, write into a drop box, pipe into a stdio receiver). The demos pass addresses only between processes you control and never print them in full. Tailcat's [threat model](https://github.com/tailscale/tailcat/blob/main/SECURITY.md) still assumes the same person on both ends, so add `--allow=<client key>` before serving a writable directory to a sandbox that runs untrusted code.
+- These demos intentionally use the public DERP relays at `tailcat.dev` for sandbox traffic. They are free, rate limited and have no SLA. In practice that shows: 10 MiB transfers were reliable in our runs, while 50 MiB uploads from a laptop in Europe to a sandbox relayed through San Francisco stalled mid-transfer in roughly half of them. Lower `DEMO_FILE_SIZE_MIB`, or point both ends at your own relay (`tailcat genkey --key=default --region=derp.example.com`) for larger files.
 - tailcat has no API, CLI or wire-format stability guarantees yet.
 - `no-auth-ssh` is what it says. Pair it with `--allow` or keep it to throwaway sandboxes.
 - If a sandbox has a network allowlist, it needs the DERP hosts from https://tailcat.dev/derpmap.json on TCP 443 and UDP 3478.
