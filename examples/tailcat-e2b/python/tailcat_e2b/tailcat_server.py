@@ -22,19 +22,24 @@ class TailcatServer:
     stop: Callable[[], None]
 
 
+@dataclass
+class SandboxTailcatServer(TailcatServer):
+    # Wait for a one-shot listener (bare `tailcat`) to exit and return what it wrote to stdout.
+    wait: Callable[[], str]
+
+
 def start_sandbox_tailcat_server(
     sandbox: Sandbox,
     tailcat_arguments: str,
     instance_name: str = "tailcat",
     wait_seconds: float = 20,
-    stdout_file: str | None = None,
-) -> TailcatServer:
+) -> SandboxTailcatServer:
     """Start a Tailcat listener inside a sandbox and read its generated address."""
     address_file = f"/tmp/{instance_name}.addr"
     log_file = f"/tmp/{instance_name}.log"
+    # exec: the SDK kills the wrapping shell by pid, so tailcat must be that process.
     server_process = sandbox.commands.run(
-        f"rm -f {address_file}; TAILCAT_ADDR_FILE={address_file} tailcat {tailcat_arguments} "
-        f"> {stdout_file or log_file} 2> {log_file}",
+        f"rm -f {address_file}; TAILCAT_ADDR_FILE={address_file} exec tailcat {tailcat_arguments} 2> {log_file}",
         background=True,
     )
 
@@ -50,7 +55,7 @@ def start_sandbox_tailcat_server(
         server_process.kill()
         raise
     print(f"[{sandbox.sandbox_id}] tailcat {tailcat_arguments}  ->  {_abbreviate(address)}")
-    return TailcatServer(address, stop=server_process.kill)
+    return SandboxTailcatServer(address, stop=server_process.kill, wait=lambda: server_process.wait().stdout)
 
 
 def start_local_tailcat_server(tailcat_arguments: str, wait_seconds: float = 20) -> TailcatServer:
@@ -87,17 +92,25 @@ def start_local_tailcat_server(tailcat_arguments: str, wait_seconds: float = 20)
 
 
 def wait_until_reachable(run_command: CommandRunner, address: str, timeout_seconds: float = 60) -> str:
-    """Retry Tailcat ping until the listener has joined DERP, then report its path."""
+    """Retry Tailcat ping until the listener has joined DERP, then report its path.
+
+    Each attempt lets tailcat resend its rendezvous ping for up to 10 s; the loop
+    covers a relay that admits the listener later than that.
+    """
     started_at = time.time()
+    last_output = ""
     while time.time() - started_at < timeout_seconds:
-        ping = run_command(f"tailcat ping --timeout 3s {address}")
+        ping = run_command(f"tailcat ping --timeout 10s {address}")
         if ping.exit_code == 0:
             pong_line = next((line for line in ping.output.splitlines() if "pong in" in line), None)
             if pong_line and "DERP" in pong_line:
                 return f"DERP relay: {pong_line.split('pong in ', maxsplit=1)[-1]}"
             return f"Tailcat connection: {pong_line.strip() if pong_line else 'ready'}"
+        last_output = ping.output
         time.sleep(1)
-    raise RuntimeError(f"tailcat server {_abbreviate(address)} not reachable after {timeout_seconds}s")
+    raise RuntimeError(
+        f"tailcat server {_abbreviate(address)} not reachable after {timeout_seconds}s:\n{last_output}"
+    )
 
 
 def require_local_tailcat() -> None:

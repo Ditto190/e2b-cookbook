@@ -3,7 +3,7 @@ import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import type { Sandbox } from "e2b";
+import type { CommandHandle, Sandbox } from "e2b";
 import { type CommandRunner, runSandboxCommand } from "./e2bSandbox";
 
 const TAILCAT_ADDRESS_PATTERN = /\btc[A-Za-z0-9_-]{20,}/;
@@ -13,22 +13,23 @@ export interface TailcatServer {
   stop(): Promise<void> | void;
 }
 
+export interface SandboxTailcatServer extends TailcatServer {
+  /** Wait for a one-shot listener (bare `tailcat`) to exit and return what it wrote to stdout. */
+  wait(): Promise<string>;
+}
+
 /** Start a Tailcat listener inside a sandbox and read its generated address. */
 export async function startSandboxTailcatServer(
   sandbox: Sandbox,
   tailcatArguments: string,
   instanceName = "tailcat",
-  {
-    waitMs = 20_000,
-    stdoutFile,
-  }: { waitMs?: number; stdoutFile?: string } = {},
-): Promise<TailcatServer> {
+  waitMs = 20_000,
+): Promise<SandboxTailcatServer> {
   const addressFile = `/tmp/${instanceName}.addr`;
   const logFile = `/tmp/${instanceName}.log`;
-  const serverProcess = await sandbox.commands.run(
-    `rm -f ${addressFile}; TAILCAT_ADDR_FILE=${addressFile} tailcat ${tailcatArguments} > ${
-      stdoutFile ?? logFile
-    } 2> ${logFile}`,
+  const serverProcess: CommandHandle = await sandbox.commands.run(
+    // exec: the SDK kills the wrapping shell by pid, so tailcat must be that process.
+    `rm -f ${addressFile}; TAILCAT_ADDR_FILE=${addressFile} exec tailcat ${tailcatArguments} 2> ${logFile}`,
     { background: true },
   );
 
@@ -62,6 +63,9 @@ export async function startSandboxTailcatServer(
     address,
     async stop(): Promise<void> {
       await serverProcess.kill();
+    },
+    async wait(): Promise<string> {
+      return (await serverProcess.wait()).stdout;
     },
   };
 }
@@ -113,15 +117,20 @@ export async function startLocalTailcatServer(
   };
 }
 
-/** Retry Tailcat ping until the listener has joined DERP, then report its path. */
+/**
+ * Retry Tailcat ping until the listener has joined DERP, then report its path.
+ * Each attempt lets tailcat resend its rendezvous ping for up to 10 s; the loop
+ * covers a relay that admits the listener later than that.
+ */
 export async function waitUntilReachable(
   runCommand: CommandRunner,
   address: string,
   timeoutMs = 60_000,
 ): Promise<string> {
   const startedAt = Date.now();
+  let lastOutput = "";
   while (Date.now() - startedAt < timeoutMs) {
-    const ping = await runCommand(`tailcat ping --timeout 3s ${address}`);
+    const ping = await runCommand(`tailcat ping --timeout 10s ${address}`);
     if (ping.exitCode === 0) {
       const pongLine = ping.output
         .split("\n")
@@ -130,12 +139,13 @@ export async function waitUntilReachable(
         ? `DERP relay: ${pongLine.split("pong in ")[1] ?? pongLine.trim()}`
         : `Tailcat connection: ${pongLine?.trim() ?? "ready"}`;
     }
+    lastOutput = ping.output;
     await delay(1000);
   }
   throw new Error(
     `tailcat server ${abbreviate(address)} not reachable after ${
       timeoutMs / 1000
-    }s`,
+    }s:\n${lastOutput}`,
   );
 }
 

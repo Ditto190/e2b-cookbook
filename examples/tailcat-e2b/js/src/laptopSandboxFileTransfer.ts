@@ -24,11 +24,28 @@ import {
   waitUntilReachable,
 } from "./tailcatServer";
 
-const FILE_SIZE_MIB = Number(process.env.DEMO_FILE_SIZE_MIB ?? 50);
+const FILE_SIZE_MIB = Number(process.env.DEMO_FILE_SIZE_MIB ?? 10);
 const FILE_SIZE_BYTES = FILE_SIZE_MIB * 1024 * 1024;
 
+// A stalled relay transfer would otherwise hang scp forever, past the sandbox timeout.
+const LOCAL_TAILCAT_TIMEOUT_MS = 300_000;
+
 function runLocalTailcat(...tailcatArguments: string[]): void {
-  execFileSync("tailcat", tailcatArguments, { stdio: "inherit" });
+  try {
+    execFileSync("tailcat", tailcatArguments, {
+      stdio: "inherit",
+      timeout: LOCAL_TAILCAT_TIMEOUT_MS,
+    });
+  } catch (error) {
+    // Do not rethrow the original error: Node prints the full argv, and the
+    // tailcat address in it is a bearer credential.
+    const { status, code } = error as { status?: number | null; code?: string };
+    // eslint-disable-next-line preserve-caught-error -- the cause would print that argv again
+    throw new Error(
+      `tailcat ${tailcatArguments[0] ?? ""} failed (${code ?? `exit ${status ?? "?"}`}). ` +
+        "Transfers through the public DERP relay can stall; retry or lower DEMO_FILE_SIZE_MIB.",
+    );
+  }
 }
 
 function runLocalCommand(command: string): Promise<CommandResult> {
@@ -64,7 +81,9 @@ async function uploadToSandbox(
   await sandbox.commands.run("mkdir -p /home/user/inbox");
   const uploadReceiver = await startSandboxTailcatServer(
     sandbox,
-    "recv /home/user/inbox",
+    // --accept-dirs keeps the uploaded name; the default flat drop box stores
+    // each upload under a server-chosen name (tailcat 0.5+).
+    "recv --accept-dirs /home/user/inbox",
     "recv",
   );
   try {

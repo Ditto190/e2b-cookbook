@@ -28,12 +28,25 @@ from .tailcat_server import (
     wait_until_reachable,
 )
 
-FILE_SIZE_MIB = int(os.environ.get("DEMO_FILE_SIZE_MIB", "50"))
+FILE_SIZE_MIB = int(os.environ.get("DEMO_FILE_SIZE_MIB", "10"))
 FILE_SIZE_BYTES = FILE_SIZE_MIB * 1024 * 1024
 
 
+# A stalled relay transfer would otherwise hang scp forever, past the sandbox timeout.
+LOCAL_TAILCAT_TIMEOUT_SECONDS = 300
+
+
 def run_local_tailcat(*tailcat_arguments: str) -> None:
-    subprocess.run(["tailcat", *tailcat_arguments], check=True)
+    try:
+        subprocess.run(["tailcat", *tailcat_arguments], check=True, timeout=LOCAL_TAILCAT_TIMEOUT_SECONDS)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as error:
+        # Do not re-raise the original: its message carries the full argv, and the
+        # tailcat address in it is a bearer credential.
+        reason = f"exit {error.returncode}" if isinstance(error, subprocess.CalledProcessError) else "timed out"
+        raise RuntimeError(
+            f"tailcat {tailcat_arguments[0]} failed ({reason}). "
+            "Transfers through the public DERP relay can stall; retry or lower DEMO_FILE_SIZE_MIB."
+        ) from None
 
 
 def run_local_command(command: str) -> CommandResult:
@@ -61,7 +74,9 @@ def transfer_speed(size_bytes: int, seconds: float) -> str:
 
 def upload_to_sandbox(sandbox: Sandbox, local_file: str, local_input_md5: str) -> None:
     sandbox.commands.run("mkdir -p /home/user/inbox")
-    upload_receiver = start_sandbox_tailcat_server(sandbox, "recv /home/user/inbox", "recv")
+    # --accept-dirs keeps the uploaded name; the default flat drop box stores
+    # each upload under a server-chosen name (tailcat 0.5+).
+    upload_receiver = start_sandbox_tailcat_server(sandbox, "recv --accept-dirs /home/user/inbox", "recv")
     try:
         connection = wait_until_reachable(run_local_command, upload_receiver.address)
         print(f"[laptop] {connection}")

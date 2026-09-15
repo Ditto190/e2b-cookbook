@@ -97,20 +97,16 @@ def main() -> None:
             print(f"[consumer -> producer] analysis-report.json returned in {elapsed_seconds:.1f}s")
             print("\nFinal report:\n" + processed_result.output.strip())
 
-            # Streaming variant: bare `tailcat` accepts one connection and copies it to
-            # stdout, so the producer receives whatever the consumer pipes in.
-            stream_receiver = start_sandbox_tailcat_server(
-                producer_sandbox, "", "stream", stdout_file="/home/user/share/stream.log"
-            )
+            # Streaming variant: bare `tailcat` accepts one connection, copies it to
+            # stdout and exits, so the producer receives whatever the consumer pipes in.
+            stream_receiver = start_sandbox_tailcat_server(producer_sandbox, "", "stream")
             try:
                 wait_until_reachable(run_in_consumer, stream_receiver.address)
                 assert_command_succeeded(
                     run_in_consumer(f"seq 1 5 | sed 's/^/log line /' | tailcat {stream_receiver.address}")
                 )
-                time.sleep(1)
-                received_stream = run_sandbox_command(producer_sandbox, "cat /home/user/share/stream.log")
-                assert_command_succeeded(received_stream)
-                print("[consumer -> producer stream] producer received:\n" + received_stream.output.strip())
+                received_stream = stream_receiver.wait()
+                print("[consumer -> producer stream] producer received:\n" + received_stream.strip())
             finally:
                 stream_receiver.stop()
         finally:

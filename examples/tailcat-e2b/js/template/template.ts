@@ -1,7 +1,7 @@
 import { Template } from "e2b";
 
 export const TEMPLATE_ALIAS = "tailcat";
-export const TAILCAT_VERSION = "0.4.0";
+export const TAILCAT_VERSION = "0.6.0";
 export const TAILCAT_URL = `https://github.com/tailscale/tailcat/releases/download/v${TAILCAT_VERSION}/tailcat_${TAILCAT_VERSION}_linux_amd64.tar.gz`;
 
 export const tailcatTemplate = Template()

@@ -162,6 +162,11 @@ const TIMEOUT_OVERRIDES: Record<string, number> = {
   // only by accident - 112s of 150s on its last green run - so one slow arxiv
   // search was always going to end it, and one did.
   'mcp-claude-code-js': 600_000,
+  // Installs its toolchain, then creates two more sandboxes and moves 10 MiB
+  // through Tailcat's rate-limited public DERP relay. The demo alone is ~30s;
+  // with the install it does not reliably fit the shared budget.
+  'tailcat-e2b-js': 300_000,
+  'tailcat-e2b-python': 300_000,
 }
 
 // Examples that run from a custom template need it built on the account first.

@@ -1,7 +1,7 @@
 from e2b import Template
 
 TEMPLATE_ALIAS = "tailcat"
-TAILCAT_VERSION = "0.4.0"
+TAILCAT_VERSION = "0.6.0"
 TAILCAT_URL = (
     "https://github.com/tailscale/tailcat/releases/download/"
     f"v{TAILCAT_VERSION}/tailcat_{TAILCAT_VERSION}_linux_amd64.tar.gz"

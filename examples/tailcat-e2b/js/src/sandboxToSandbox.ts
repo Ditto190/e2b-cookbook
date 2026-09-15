@@ -7,7 +7,6 @@
  * the producer's address to the consumer; file bytes do not pass through it.
  */
 import "dotenv/config";
-import { setTimeout as delay } from "node:timers/promises";
 import type { Sandbox } from "e2b";
 import {
   assertCommandSucceeded,
@@ -112,15 +111,12 @@ try {
     );
     console.log("\nFinal report:\n" + processedResult.output.trim());
 
-    // Streaming variant: bare `tailcat` accepts one connection and copies it to
-    // stdout, so the producer receives whatever the consumer pipes in.
+    // Streaming variant: bare `tailcat` accepts one connection, copies it to
+    // stdout and exits, so the producer receives whatever the consumer pipes in.
     const streamReceiver = await startSandboxTailcatServer(
       producerSandbox,
       "",
       "stream",
-      {
-        stdoutFile: "/home/user/share/stream.log",
-      },
     );
     try {
       await waitUntilReachable(runInConsumer, streamReceiver.address);
@@ -129,15 +125,10 @@ try {
           `seq 1 5 | sed 's/^/log line /' | tailcat ${streamReceiver.address}`,
         ),
       );
-      await delay(1000);
-      const receivedStream = await runSandboxCommand(
-        producerSandbox,
-        "cat /home/user/share/stream.log",
-      );
-      assertCommandSucceeded(receivedStream);
+      const receivedStream = await streamReceiver.wait();
       console.log(
         "[consumer -> producer stream] producer received:\n" +
-          receivedStream.output.trim(),
+          receivedStream.trim(),
       );
     } finally {
       await streamReceiver.stop();
