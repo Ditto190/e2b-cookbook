@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "tailcat-e2b"
+version = "0.1.0"
+description = "Tailcat (Tailscale data plane, no control plane) between E2B sandboxes and your laptop"
+authors = ["Tomas Varga <tomasvarga@sudolabs.io>"]
+readme = "../README.md"
+packages = [{ include = "tailcat_e2b" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+e2b = "^2.46.0"
+python-dotenv = "^1.0.1"
+
+[tool.poetry.scripts]
+start = "tailcat_e2b.sandbox_to_sandbox:main"  # the one script that needs nothing on your machine
+build-template = "tailcat_e2b.build_template:main"
+laptop-sandbox-file-transfer = "tailcat_e2b.laptop_sandbox_file_transfer:main"
+sandbox-to-sandbox = "tailcat_e2b.sandbox_to_sandbox:main"
+sandbox-tests-local-dev-server = "tailcat_e2b.sandbox_tests_local_dev_server:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

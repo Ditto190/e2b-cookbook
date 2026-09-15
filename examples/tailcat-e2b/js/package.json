@@ -1,0 +1,28 @@
+{
+  "name": "tailcat-e2b",
+  "version": "1.0.0",
+  "description": "Tailcat (Tailscale data plane, no control plane) between E2B sandboxes and your laptop",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/sandboxToSandbox.ts",
+    "lint": "eslint src template",
+    "typecheck": "tsc --noEmit",
+    "laptop-sandbox-file-transfer": "tsx src/laptopSandboxFileTransfer.ts",
+    "sandbox-to-sandbox": "tsx src/sandboxToSandbox.ts",
+    "sandbox-tests-local-dev-server": "tsx src/sandboxTestsLocalDevServer.ts",
+    "e2b:build": "tsx template/build.ts"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.2.0",
+    "eslint": "^10.8.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.67.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "e2b": "^2.46.0"
+  }
+}

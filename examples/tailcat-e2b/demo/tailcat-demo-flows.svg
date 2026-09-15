@@ -1,0 +1,119 @@
+<svg viewBox="0 0 2000 1400" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<marker id="arrOrange" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L9,5 L0,10 z" fill="#ff8748"/></marker>
+<marker id="arrGray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L9,5 L0,10 z" fill="#b7c0cc"/></marker>
+<marker id="arrRed" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L9,5 L0,10 z" fill="#e05a4e"/></marker>
+</defs>
+<rect x="0" y="0" width="2000" height="1400" fill="#0b1016"/>
+
+<text x="80" y="70" font-family="monospace" font-size="20" letter-spacing="3" fill="#ff8748">TAILCAT + E2B</text>
+<text x="80" y="112" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#ffffff">Three private networking flows</text>
+<text x="80" y="146" font-family="monospace" font-size="22" fill="#8b96a3">Encrypted connections using only an address — no public ingress</text>
+<line x1="1450" y1="92" x2="1510" y2="92" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+<text x="1530" y="99" font-family="monospace" font-size="16" letter-spacing="1" fill="#ff8748">OUTBOUND / DATA</text>
+<line x1="1450" y1="132" x2="1510" y2="132" stroke="#b7c0cc" stroke-width="2.5" marker-end="url(#arrGray)"/>
+<text x="1530" y="139" font-family="monospace" font-size="16" letter-spacing="1" fill="#b7c0cc">RETURN / RESULT</text>
+
+<!-- FLOW 01 -->
+<rect x="60" y="200" width="1880" height="340" rx="10" fill="none" stroke="#2a333d" stroke-width="2"/>
+<text x="90" y="238" font-family="monospace" font-size="20" letter-spacing="2" fill="#8b96a3">FLOW 01 — LAPTOP ↔ SANDBOX FILES</text>
+
+<rect x="110" y="270" width="420" height="220" rx="6" fill="#151b22" stroke="#d8dee8" stroke-width="2"/>
+<text x="130" y="300" font-family="monospace" font-size="16" fill="#b7c0cc">ACTOR</text>
+<text x="130" y="335" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">Laptop</text>
+<text x="130" y="370" font-family="monospace" font-size="18" fill="#8b96a3">creates input.bin · 10 MiB</text>
+<text x="130" y="398" font-family="monospace" font-size="18" fill="#8b96a3">receives output.bin + report</text>
+
+<rect x="790" y="270" width="420" height="220" rx="6" fill="#241b19" stroke="#ff8748" stroke-width="2"/>
+<text x="810" y="300" font-family="monospace" font-size="16" fill="#ff8748">TRANSFER</text>
+<text x="810" y="335" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">tailcat cp</text>
+<text x="810" y="370" font-family="monospace" font-size="18" fill="#8b96a3">upload → write-only receiver</text>
+<text x="810" y="398" font-family="monospace" font-size="18" fill="#8b96a3">download ← read-only server</text>
+
+<rect x="1470" y="270" width="420" height="220" rx="6" fill="#151b22" stroke="#d8dee8" stroke-width="2"/>
+<text x="1490" y="300" font-family="monospace" font-size="16" fill="#b7c0cc">ACTOR</text>
+<text x="1490" y="335" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">E2B sandbox</text>
+<text x="1490" y="370" font-family="monospace" font-size="18" fill="#8b96a3">MD5 verifies input.bin</text>
+<text x="1490" y="396" font-family="monospace" font-size="18" fill="#8b96a3">creates output.bin</text>
+<text x="1490" y="422" font-family="monospace" font-size="18" fill="#8b96a3">creates transfer-report.json</text>
+
+<text x="660" y="323" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="2" fill="#ff8748">UPLOAD →</text>
+<path d="M545,340 L775,340" fill="none" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+<path d="M1225,340 L1455,340" fill="none" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+<text x="1340" y="413" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="2" fill="#b7c0cc">← DOWNLOAD</text>
+<path d="M1455,435 L1225,435" fill="none" stroke="#b7c0cc" stroke-width="2.5" marker-end="url(#arrGray)"/>
+<path d="M775,435 L545,435" fill="none" stroke="#b7c0cc" stroke-width="2.5" marker-end="url(#arrGray)"/>
+<text x="960" y="470" text-anchor="middle" font-family="monospace" font-size="16" fill="#8b96a3">output MD5 + complete report verified</text>
+
+<!-- FLOW 02 -->
+<rect x="60" y="580" width="1880" height="380" rx="10" fill="none" stroke="#2a333d" stroke-width="2"/>
+<text x="90" y="618" font-family="monospace" font-size="20" letter-spacing="2" fill="#8b96a3">FLOW 02 — SANDBOX ↔ SANDBOX PROCESSING</text>
+
+<rect x="110" y="650" width="420" height="260" rx="6" fill="#151b22" stroke="#d8dee8" stroke-width="2"/>
+<text x="130" y="680" font-family="monospace" font-size="16" fill="#b7c0cc">ACTOR</text>
+<text x="130" y="715" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">Producer sandbox</text>
+<text x="130" y="750" font-family="monospace" font-size="18" fill="#8b96a3">dataset.bin · 10 MiB</text>
+<text x="130" y="778" font-family="monospace" font-size="18" fill="#8b96a3">receives report + logs</text>
+
+<rect x="790" y="650" width="420" height="260" rx="6" fill="#241b19" stroke="#ff8748" stroke-width="2"/>
+<text x="810" y="680" font-family="monospace" font-size="16" fill="#ff8748">RELAY</text>
+<text x="810" y="715" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">Tailcat via DERP</text>
+<text x="810" y="750" font-family="monospace" font-size="18" fill="#8b96a3">WireGuard encrypted end to end</text>
+
+<rect x="1470" y="650" width="420" height="260" rx="6" fill="#151b22" stroke="#d8dee8" stroke-width="2"/>
+<text x="1490" y="680" font-family="monospace" font-size="16" fill="#b7c0cc">ACTOR</text>
+<text x="1490" y="715" font-family="Arial, sans-serif" font-size="26" font-weight="bold" fill="#ffffff">Consumer sandbox</text>
+<text x="1490" y="750" font-family="monospace" font-size="18" fill="#8b96a3">MD5 verifies dataset</text>
+<text x="1490" y="778" font-family="monospace" font-size="18" fill="#8b96a3">SHA-256 analysis</text>
+<text x="1490" y="806" font-family="monospace" font-size="18" fill="#8b96a3">creates analysis-report.json</text>
+
+<text x="660" y="705" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="2" fill="#ff8748">DATASET →</text>
+<path d="M545,730 L775,730" fill="none" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+<path d="M1225,730 L1455,730" fill="none" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+
+<text x="1340" y="832" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="2" fill="#b7c0cc">← REPORT</text>
+<path d="M1455,850 L1225,850" fill="none" stroke="#b7c0cc" stroke-width="2.5" marker-end="url(#arrGray)"/>
+<path d="M775,850 L545,850" fill="none" stroke="#b7c0cc" stroke-width="2.5" marker-end="url(#arrGray)"/>
+<text x="1340" y="877" text-anchor="middle" font-family="monospace" font-size="14" letter-spacing="2" fill="#8b96a3">← LOG STREAM</text>
+<path d="M1455,895 L1225,895" fill="none" stroke="#8b96a3" stroke-width="2.5" stroke-dasharray="8,7" marker-end="url(#arrGray)"/>
+<path d="M775,895 L545,895" fill="none" stroke="#8b96a3" stroke-width="2.5" stroke-dasharray="8,7" marker-end="url(#arrGray)"/>
+
+<text x="960" y="948" text-anchor="middle" font-family="monospace" font-size="17" fill="#b7c0cc">verified dataset · returned report · streamed logs</text>
+
+<!-- FLOW 03 -->
+<rect x="60" y="1000" width="1880" height="370" rx="10" fill="none" stroke="#2a333d" stroke-width="2"/>
+<text x="90" y="1038" font-family="monospace" font-size="20" letter-spacing="2" fill="#8b96a3">FLOW 03 — SANDBOX TESTS A LAPTOP-LOCAL SERVICE</text>
+
+<rect x="110" y="1060" width="420" height="150" rx="6" fill="#151b22" stroke="#d8dee8" stroke-width="2"/>
+<text x="130" y="1088" font-family="monospace" font-size="16" fill="#b7c0cc">ACTOR</text>
+<text x="130" y="1120" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff">E2B sandbox</text>
+<text x="130" y="1150" font-family="monospace" font-size="17" fill="#8b96a3">SOCKS: /health · /api/project</text>
+<text x="130" y="1176" font-family="monospace" font-size="17" fill="#8b96a3">forwarded port: /api/check</text>
+
+<rect x="790" y="1060" width="420" height="150" rx="6" fill="#241b19" stroke="#ff8748" stroke-width="2"/>
+<text x="810" y="1088" font-family="monospace" font-size="16" fill="#ff8748">ALLOW</text>
+<text x="810" y="1120" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff">Tailcat identity gate</text>
+<text x="810" y="1150" font-family="monospace" font-size="17" fill="#8b96a3">sandbox public key only</text>
+
+<rect x="1470" y="1060" width="420" height="150" rx="6" fill="#151b22" stroke="#d8dee8" stroke-width="2"/>
+<text x="1490" y="1088" font-family="monospace" font-size="16" fill="#b7c0cc">ACTOR</text>
+<text x="1490" y="1120" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff">Laptop-local API</text>
+<text x="1490" y="1150" font-family="monospace" font-size="17" fill="#8b96a3">127.0.0.1:8765</text>
+<text x="1490" y="1176" font-family="monospace" font-size="17" fill="#8b96a3">never deployed · never public</text>
+
+<path d="M545,1135 L775,1135" fill="none" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+<path d="M1225,1135 L1455,1135" fill="none" stroke="#ff8748" stroke-width="2.5" marker-end="url(#arrOrange)"/>
+
+<rect x="110" y="1250" width="420" height="100" rx="6" fill="#151b22" stroke="#e05a4e" stroke-width="2"/>
+<text x="130" y="1278" font-family="monospace" font-size="16" fill="#e05a4e">ACTOR</text>
+<text x="130" y="1310" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#ffffff">Different identity</text>
+
+<path d="M545,1300 L765,1300" fill="none" stroke="#e05a4e" stroke-width="2.5" stroke-dasharray="6,6" marker-end="url(#arrRed)"/>
+<line x1="820" y1="1280" x2="860" y2="1320" stroke="#e05a4e" stroke-width="3"/>
+<line x1="860" y1="1280" x2="820" y2="1320" stroke="#e05a4e" stroke-width="3"/>
+<text x="880" y="1305" font-family="monospace" font-size="17" fill="#e05a4e">rejected</text>
+
+<rect x="1470" y="1250" width="420" height="100" rx="6" fill="#241b19" stroke="#ff8748" stroke-width="2"/>
+<text x="1490" y="1278" font-family="monospace" font-size="16" fill="#ff8748">RESULT</text>
+<text x="1490" y="1315" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#ffffff">4 checks passed</text>
+</svg>
